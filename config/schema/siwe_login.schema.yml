@@ -1,0 +1,22 @@
+siwe_login.settings:
+  type: config_object
+  label: 'SIWE Login settings'
+  mapping:
+    expected_domain:
+      type: string
+      label: 'Expected domain'
+    nonce_ttl:
+      type: integer
+      label: 'Nonce TTL'
+    message_ttl:
+      type: integer
+      label: 'Message TTL'
+    allow_registration:
+      type: boolean
+      label: 'Allow registration'
+    require_email_verification:
+      type: boolean
+      label: 'Require email verification'
+    session_timeout:
+      type: integer
+      label: 'Session timeout'

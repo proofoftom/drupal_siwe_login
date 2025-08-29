@@ -1,0 +1,12 @@
+# permission_callbacks:
+#   - 'Drupal\siwe_login\siwe_login_permissions'
+
+siwe_login.use:
+  title: "Use SIWE authentication"
+  description: "Allows users to authenticate using Sign-In with Ethereum."
+  restrict access: false
+
+siwe_login.manage_own_wallet:
+  title: "Manage own Ethereum wallet"
+  description: "Allows users to manage their own Ethereum wallet address."
+  restrict access: true

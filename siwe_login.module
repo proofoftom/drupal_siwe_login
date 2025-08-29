@@ -1,0 +1,43 @@
+<?php
+
+/**
+ * @file
+ * Contains siwe_login.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function siwe_login_help($route_name, RouteMatchInterface $route_match)
+{
+  switch ($route_name) {
+    case 'help.page.siwe_login':
+      return '<p>' . t('This module provides Ethereum wallet-based authentication for Drupal using the Sign-In with Ethereum (SIWE) standard.') . '</p>';
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function siwe_login_permission()
+{
+  return [
+    'use siwe authentication' => [
+      'title' => t('Use SIWE authentication'),
+      'description' => t('Allows users to authenticate using Sign-In with Ethereum.'),
+    ],
+    'manage own ethereum wallet' => [
+      'title' => t('Manage own Ethereum wallet'),
+      'description' => t('Allows users to manage their own Ethereum wallet address.'),
+    ],
+  ];
+}
+
+/**
+ * Permission callback for siwe_login module.
+ */
+// function siwe_login_permissions() {
+//   return [];
+// }

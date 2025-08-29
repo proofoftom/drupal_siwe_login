@@ -1,0 +1,8 @@
+siwe_login/login:
+  version: 1.x
+  js:
+    js/siwe-login.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
