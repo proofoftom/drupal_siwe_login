@@ -15,7 +15,7 @@ This module provides Ethereum wallet-based authentication for Drupal using the S
 1. Install via Composer: `composer require drupal/siwe_login`
 2. Enable modules: `drush en siwe_login -y`
 3. Import configuration: `drush config-import --partial --source=modules/custom/siwe_login/config/install`
-4. Configure at `/admin/config/people/siwe`
+4. Configure at `/admin/people/siwe` (to be implemented)
 
 ## API Endpoints
 
@@ -23,9 +23,9 @@ This module provides Ethereum wallet-based authentication for Drupal using the S
 - `POST /siwe/verify` - Verify SIWE message and authenticate
 - `POST /siwe/logout` - Logout user
 
-## Configuration
+## Configuration (to be implemented)
 
-See `/admin/config/people/siwe` for configuration options.
+See `/admin/people/siwe` for configuration options.
 
 ## Security
 
@@ -35,7 +35,7 @@ See `/admin/config/people/siwe` for configuration options.
 
 ## Support
 
-Report issues at: https://github.com/your-org/siwe_drupal/issues
+Report issues at: [https://github.com/proofoftom/drupal_siwe_login/issues](https://github.com/proofoftom/drupal_siwe_login/issues)
 
 ## Implementation Details
 
