@@ -21,7 +21,6 @@ This module provides Ethereum wallet-based authentication for Drupal using the S
 
 - `GET /siwe/nonce` - Get authentication nonce
 - `POST /siwe/verify` - Verify SIWE message and authenticate
-- `POST /siwe/logout` - Logout user
 
 ## Configuration (to be implemented)
 

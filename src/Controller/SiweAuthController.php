@@ -36,10 +36,7 @@ class SiweAuthController extends ControllerBase
     try {
       $nonce = $this->siweAuthService->generateNonce();
 
-      // Store nonce in session
-      $request->getSession()->set('siwe_nonce', $nonce);
-
-      // Also store in cache for validation
+      // Store nonce in cache with a 5-minute TTL (300 seconds)
       \Drupal::cache()->set('siwe_nonce_lookup:' . $nonce, TRUE, time() + 300);
 
       return new JsonResponse([
@@ -94,18 +91,5 @@ class SiweAuthController extends ControllerBase
         'error' => $e->getMessage(),
       ], 400);
     }
-  }
-
-  /**
-   * Logs out the current user.
-   */
-  public function logout(): JsonResponse
-  {
-    user_logout();
-
-    return new JsonResponse([
-      'success' => TRUE,
-      'message' => 'Logged out successfully',
-    ]);
   }
 }

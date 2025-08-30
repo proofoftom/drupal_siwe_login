@@ -1,26 +1,17 @@
 siwe_login.nonce:
-  path: '/siwe/nonce'
+  path: "/siwe/nonce"
   defaults:
     _controller: '\Drupal\siwe_login\Controller\SiweAuthController::getNonce'
   requirements:
-    _access: 'TRUE'
+    _access: "TRUE"
   options:
     _admin_route: FALSE
 
 siwe_login.verify:
-  path: '/siwe/verify'
+  path: "/siwe/verify"
   defaults:
     _controller: '\Drupal\siwe_login\Controller\SiweAuthController::verify'
   requirements:
-    _access: 'TRUE'
-  options:
-    _admin_route: FALSE
-
-siwe_login.logout:
-  path: '/siwe/logout'
-  defaults:
-    _controller: '\Drupal\siwe_login\Controller\SiweAuthController::logout'
-  requirements:
-    _access: 'TRUE'
+    _access: "TRUE"
   options:
     _admin_route: FALSE
