@@ -1,4 +1,4 @@
-expected_domain: 'localhost:3000'
+expected_domain: drupal.ddev.site
 nonce_ttl: 300
 message_ttl: 600
 allow_registration: true

@@ -3,7 +3,9 @@
 
   Drupal.behaviors.siweLogin = {
     attach: function (context, settings) {
-      const button = document.querySelector("#siwe-login-button", context);
+      console.log("SIWE Login behavior attached to context:", context);
+      const button = context.querySelector("#siwe-login-button");
+      console.log("Button found:", button);
 
       if (!button) return;
 

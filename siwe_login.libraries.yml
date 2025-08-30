@@ -1,4 +1,4 @@
-siwe_login/login:
+siwe_login_library:
   version: 1.x
   js:
     js/siwe-login.js: {}

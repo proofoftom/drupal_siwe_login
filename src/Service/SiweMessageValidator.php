@@ -210,6 +210,12 @@ class SiweMessageValidator
   {
     $expected_domain = $this->config->get('expected_domain') ?: \Drupal::request()->getHost();
 
+    // log the expected and actual domain for debugging
+    \Drupal::logger('siwe_login')->debug('Validating domain. Expected: @expected, Actual: @actual', [
+      '@expected' => $expected_domain,
+      '@actual' => $message_data['domain'],
+    ]);
+
     if ($message_data['domain'] !== $expected_domain) {
       throw new InvalidSiweMessageException('Invalid domain');
     }
