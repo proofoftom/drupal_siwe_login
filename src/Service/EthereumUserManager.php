@@ -99,6 +99,7 @@ class EthereumUserManager
       '@address' => $normalized_address,
     ]);
 
+    /** @var \Drupal\user\UserInterface $user */
     return $user;
   }
 
