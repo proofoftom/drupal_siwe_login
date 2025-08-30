@@ -10,7 +10,8 @@ use Drupal\siwe_login\Exception\InvalidSiweMessageException;
 /**
  * Service for validating SIWE messages.
  */
-class SiweMessageValidator {
+class SiweMessageValidator
+{
 
   protected $logger;
   protected $time;
@@ -43,7 +44,8 @@ class SiweMessageValidator {
    *
    * @throws \Drupal\siwe_login\Exception\InvalidSiweMessageException
    */
-  public function validateMessage(array $message_data): bool {
+  public function validateMessage(array $message_data): bool
+  {
     try {
       // Parse the SIWE message
       $parsed_message = $this->parseSiweMessage($message_data['message']);
@@ -70,9 +72,13 @@ class SiweMessageValidator {
       // Validate domain
       $this->validateDomain($message_data);
 
+      // TODO: Validate that ENS name resolves to signing address
+      // if (isset($message_data['resources'])) {
+      //   $this->validateENS($message_data['address'], $message_data['resources'][0]);
+      // }
+
       return TRUE;
-    }
-    catch (\Exception $e) {
+    } catch (\Exception $e) {
       $this->logger->error('SIWE message validation failed: @message', [
         '@message' => $e->getMessage(),
       ]);
@@ -83,7 +89,8 @@ class SiweMessageValidator {
   /**
    * Validates the structure of a SIWE message.
    */
-  protected function validateMessageStructure(array $message_data): void {
+  protected function validateMessageStructure(array $message_data): void
+  {
     $required_fields = ['domain', 'address', 'uri', 'version', 'nonce', 'issuedAt'];
     foreach ($required_fields as $field) {
       if (empty($message_data[$field])) {
@@ -95,7 +102,8 @@ class SiweMessageValidator {
   /**
    * Verifies the cryptographic signature.
    */
-  protected function verifySignature(string $message, string $signature, string $address): bool {
+  protected function verifySignature(string $message, string $signature, string $address): bool
+  {
     // Prepare the message for hashing according to EIP-191
     $message_prefix = "\x19Ethereum Signed Message:\n" . strlen($message);
     $prefixed_message = $message_prefix . $message;
@@ -146,7 +154,8 @@ class SiweMessageValidator {
   /**
    * Validates message timestamps.
    */
-  protected function validateTimestamps(array $message_data): void {
+  protected function validateTimestamps(array $message_data): void
+  {
     $current_time = $this->time->getCurrentTime();
 
     // Check if message is not from the future (clock skew tolerance of 30 seconds)
@@ -183,7 +192,8 @@ class SiweMessageValidator {
   /**
    * Validates nonce for replay attack prevention.
    */
-  protected function validateNonce(string $nonce): void {
+  protected function validateNonce(string $nonce): void
+  {
     // Check nonce against stored values in cache
     $nonce_key = 'siwe_nonce_lookup:' . $nonce;
     $cached_client = \Drupal::cache()->get($nonce_key);
@@ -196,7 +206,8 @@ class SiweMessageValidator {
   /**
    * Validates domain matches current site.
    */
-  protected function validateDomain(array $message_data): void {
+  protected function validateDomain(array $message_data): void
+  {
     $expected_domain = $this->config->get('expected_domain') ?: \Drupal::request()->getHost();
 
     if ($message_data['domain'] !== $expected_domain) {
@@ -207,7 +218,8 @@ class SiweMessageValidator {
   /**
    * Parses a SIWE message according to ERC-4361 format.
    */
-  private function parseSiweMessage(string $message): array {
+  public function parseSiweMessage(string $message): array
+  {
     $lines = explode("\n", $message);
     $parsed = [];
 
@@ -247,10 +259,10 @@ class SiweMessageValidator {
       if (empty($line))
         continue;
 
-      if (strpos($line, ': ') !== false) {
-        list($key, $value) = explode(': ', $line, 2);
-        $key = trim($key);
-        $value = trim($value);
+      // Check if this line is a field header (may or may not have a value)
+      if (preg_match("/^(URI|Version|Chain ID|Nonce|Issued At|Expiration Time|Not Before|Request ID|Resources):(.*)$/", $line, $matches)) {
+        $key = trim($matches[1]);
+        $value = trim($matches[2]);
 
         switch ($key) {
           case 'URI':
@@ -278,13 +290,13 @@ class SiweMessageValidator {
             $parsed['requestId'] = $value;
             break;
           case 'Resources':
-            // Resources is the last field and can be multiline
-            $parsed['resources'] = [$value];
+            // Resources field header - always initialize empty array
+            $parsed['resources'] = [];
             break;
         }
-      } elseif (isset($parsed['resources'])) {
-        // Additional resource URLs
-        $parsed['resources'][] = $line;
+      } elseif (isset($parsed['resources']) && strpos($line, '- ') === 0) {
+        // Resource lines always start with "- "
+        $parsed['resources'][] = trim(substr($line, 2)); // Remove "- " prefix
       }
     }
 
@@ -294,7 +306,8 @@ class SiweMessageValidator {
   /**
    * Converts an Ethereum address to EIP-55 checksum format.
    */
-  private function toChecksumAddress(string $address): string {
+  private function toChecksumAddress(string $address): string
+  {
     $address = strtolower(substr($address, 0, 2) === '0x' ? substr($address, 2) : $address);
     $hash = \kornrunner\Keccak::hash($address, 256);
     $address = str_split($address);

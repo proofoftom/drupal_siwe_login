@@ -11,7 +11,8 @@ use Drupal\user\UserInterface;
 /**
  * Manages Ethereum wallet-based user accounts.
  */
-class EthereumUserManager {
+class EthereumUserManager
+{
 
   protected $entityTypeManager;
   protected $logger;
@@ -41,7 +42,8 @@ class EthereumUserManager {
    * @return \Drupal\user\UserInterface
    *   The user entity.
    */
-  public function findOrCreateUser(string $address, array $additional_data = []): UserInterface {
+  public function findOrCreateUser(string $address, array $additional_data = []): UserInterface
+  {
     $address = $this->normalizeAddress($address);
 
     // Try to find existing user
@@ -49,8 +51,7 @@ class EthereumUserManager {
 
     if (!$user) {
       $user = $this->createUserFromAddress($address, $additional_data);
-    }
-    else {
+    } else {
       // Update last login and any additional data
       $this->updateUserData($user, $additional_data);
     }
@@ -61,7 +62,8 @@ class EthereumUserManager {
   /**
    * Finds a user by Ethereum address.
    */
-  public function findUserByAddress(string $address): ?UserInterface {
+  public function findUserByAddress(string $address): ?UserInterface
+  {
     $users = $this->entityTypeManager
       ->getStorage('user')
       ->loadByProperties(['field_ethereum_address' => $this->normalizeAddress($address)]);
@@ -72,27 +74,28 @@ class EthereumUserManager {
   /**
    * Creates a new user from an Ethereum address.
    */
-  protected function createUserFromAddress(string $address, array $data): UserInterface {
+  protected function createUserFromAddress(string $address, array $data): UserInterface
+  {
     $normalized_address = $this->normalizeAddress($address);
+
+    // Use ENS name from the verified SIWE message
+    $ens_name = $data['ensName'] ?? NULL;
+    $username = $ens_name ?: $this->generateUsername($normalized_address);
 
     $user_storage = $this->entityTypeManager->getStorage('user');
 
     $user = $user_storage->create([
-      'name' => $this->generateUsername($normalized_address),
+      'name' => $username,
       'mail' => $this->generateEmail($normalized_address),
       'field_ethereum_address' => $normalized_address,
       'status' => 1,
       'langcode' => $this->languageManager->getCurrentLanguage()->getId(),
     ]);
 
-    // Set additional fields from SIWE data
-    if (isset($data['ens_name'])) {
-      $user->set('field_ens_name', $data['ens_name']);
-    }
-
     $user->save();
 
-    $this->logger->info('Created new user for Ethereum address @address', [
+    $this->logger->info('Created new user <strong>@name</strong> for Ethereum address @address', [
+      '@name' => $username,
       '@address' => $normalized_address,
     ]);
 
@@ -102,24 +105,27 @@ class EthereumUserManager {
   /**
    * Updates user data from SIWE message.
    */
-  protected function updateUserData(UserInterface $user, array $data): void {
-    // Update any additional fields from SIWE data
-    if (isset($data['ens_name'])) {
-      $user->set('field_ens_name', $data['ens_name']);
+  protected function updateUserData(UserInterface $user, array $data): void
+  {
+    // Update ENS name from SIWE data
+    if (isset($data['ensName']) && $data['ensName'] !== $user->get('name')->value) {
+      $user->set('name', $data['ensName']);
+
+      // Save the user
+      $user->save();
+
+      $this->logger->info('Updated ENS for Ethereum address @address to @ens_name', [
+        '@address' => $user->get('field_ethereum_address')->value,
+        '@ens_name' => $data['ensName'],
+      ]);
     }
-
-    // Save the user
-    $user->save();
-
-    $this->logger->info('Updated user data for Ethereum address @address', [
-      '@address' => $user->get('field_ethereum_address')->value,
-    ]);
   }
 
   /**
    * Normalizes an Ethereum address.
    */
-  protected function normalizeAddress(string $address): string {
+  protected function normalizeAddress(string $address): string
+  {
     // Convert to checksummed address format
     return strtolower(trim($address));
   }
@@ -127,7 +133,8 @@ class EthereumUserManager {
   /**
    * Generates a unique username from address.
    */
-  protected function generateUsername(string $address): string {
+  protected function generateUsername(string $address): string
+  {
     $base_username = 'eth_' . substr($address, 2, 8);
     $username = $base_username;
     $i = 1;
@@ -142,14 +149,16 @@ class EthereumUserManager {
   /**
    * Generates email from address.
    */
-  protected function generateEmail(string $address): string {
+  protected function generateEmail(string $address): string
+  {
     return substr($address, 2, 12) . '@ethereum.local';
   }
 
   /**
    * Checks if username exists.
    */
-  protected function usernameExists(string $username): bool {
+  protected function usernameExists(string $username): bool
+  {
     $users = $this->entityTypeManager
       ->getStorage('user')
       ->loadByProperties(['name' => $username]);

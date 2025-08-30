@@ -12,7 +12,8 @@ use Drupal\user\UserInterface;
 /**
  * Service for handling SIWE authentication.
  */
-class SiweAuthService {
+class SiweAuthService
+{
 
   protected $entityTypeManager;
   protected $session;
@@ -43,7 +44,8 @@ class SiweAuthService {
   /**
    * Generates a nonce for SIWE.
    */
-  public function generateNonce(): string {
+  public function generateNonce(): string
+  {
     // Generate a cryptographically secure random nonce.
     return bin2hex(random_bytes(16));
   }
@@ -51,7 +53,8 @@ class SiweAuthService {
   /**
    * Authenticates a user using SIWE.
    */
-  public function authenticate(array $data): ?UserInterface {
+  public function authenticate(array $data): ?UserInterface
+  {
     try {
       // Validate the SIWE message
       $is_valid = $this->messageValidator->validateMessage($data);
@@ -60,16 +63,49 @@ class SiweAuthService {
         return NULL;
       }
 
+      // Extract ENS name from the raw message
+      $ensName = $this->extractEnsNameFromMessage($data['message']);
+
+      // Add ENS name to the data passed to user manager
+      $data['ensName'] = $ensName;
+
       // Find or create user
       $user = $this->userManager->findOrCreateUser($data['address'], $data);
 
       return $user;
-    }
-    catch (\Exception $e) {
+    } catch (\Exception $e) {
       $this->logger->error('SIWE authentication failed: @message', [
         '@message' => $e->getMessage(),
       ]);
       return NULL;
     }
   }
+
+  /**
+   * Extracts ENS name from SIWE message resources.
+   */
+  private function extractEnsNameFromMessage(string $message): ?string
+  {
+    try {
+      // Parse the message to extract resources
+      $parsed = $this->messageValidator->parseSiweMessage($message);
+
+      // Extract ENS name from resources if available
+      if (isset($parsed['resources']) && !empty($parsed['resources'])) {
+        foreach ($parsed['resources'] as $resource) {
+          if (strpos($resource, 'ens:') === 0) {
+            return substr($resource, 4); // Remove 'ens:' prefix
+          }
+        }
+      }
+
+      return NULL;
+    } catch (\Exception $e) {
+      $this->logger->warning('Failed to extract ENS name from SIWE message: @message', [
+        '@message' => $e->getMessage(),
+      ]);
+      return NULL;
+    }
+  }
+
 }
