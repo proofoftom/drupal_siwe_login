@@ -37,7 +37,8 @@ class SiweAuthController extends ControllerBase
       $nonce = $this->siweAuthService->generateNonce();
 
       // Store nonce in cache with a 5-minute TTL (300 seconds)
-      \Drupal::cache()->set('siwe_nonce_lookup:' . $nonce, TRUE, time() + 300);
+      $ttl = \Drupal::config('siwe_login.settings')->get('nonce_ttl');
+      \Drupal::cache()->set('siwe_nonce_lookup:' . $nonce, TRUE, time() + $ttl);
 
       return new JsonResponse([
         'nonce' => $nonce,
