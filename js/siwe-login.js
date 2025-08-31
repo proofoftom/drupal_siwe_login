@@ -3,9 +3,7 @@
 
   Drupal.behaviors.siweLogin = {
     attach: function (context, settings) {
-      console.log("SIWE Login behavior attached to context:", context);
       const button = context.querySelector("#siwe-login-button");
-      console.log("Button found:", button);
 
       if (!button) return;
 
@@ -25,23 +23,29 @@
           // Get nonce from server
           const nonceResponse = await fetch("/siwe/nonce");
           const { nonce } = await nonceResponse.json();
+          const chainId = await window.ethereum.request({
+            method: "eth_chainId",
+          });
 
           // Create SIWE message
-          const message = createSiweMessage({
+          const message = new SiweMessage({
             domain: window.location.host,
-            address: address,
+            address,
             statement: "Sign in with Ethereum to Drupal",
             uri: window.location.origin,
             version: "1",
-            chainId: 1,
+            chainId: parseInt(chainId, 16),
             nonce: nonce,
             issuedAt: new Date().toISOString(),
           });
+          const preparedMessage = message.prepareMessage();
 
           // Sign message
+          // TODO: For whatever reason this appears in MetaMask as a "Signature request" whereas
+          // when using ethers.js in @next/components/auth/SiweLogin.tsx it appears as a "Sign-in request" - research further
           const signature = await window.ethereum.request({
             method: "personal_sign",
-            params: [message, address],
+            params: [preparedMessage, address],
           });
 
           // Verify with server
@@ -51,7 +55,7 @@
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              message: message,
+              message: preparedMessage,
               signature: signature,
               address: address,
               nonce: nonce,
@@ -70,17 +74,4 @@
       });
     },
   };
-
-  function createSiweMessage(params) {
-    return `${params.domain} wants you to sign in with your Ethereum account:
-${params.address}
-
-${params.statement}
-
-URI: ${params.uri}
-Version: ${params.version}
-Chain ID: ${params.chainId}
-Nonce: ${params.nonce}
-Issued At: ${params.issuedAt}`;
-  }
 })(Drupal, drupalSettings);

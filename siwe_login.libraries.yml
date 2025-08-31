@@ -1,6 +1,7 @@
 siwe_login_library:
   version: 1.x
   js:
+    js/siwe-browser-wrapper.js: {}
     js/siwe-login.js: {}
   dependencies:
     - core/jquery
