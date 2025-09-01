@@ -15,3 +15,13 @@ siwe_login.verify:
     _access: "TRUE"
   options:
     _admin_route: FALSE
+
+siwe_login.settings:
+  path: '/admin/config/people/siwe'
+  defaults:
+    _form: '\Drupal\siwe_login\Form\SiweSettingsForm'
+    _title: 'SIWE Login Settings'
+  requirements:
+    _permission: 'administer siwe login settings'
+  options:
+    _admin_route: TRUE
