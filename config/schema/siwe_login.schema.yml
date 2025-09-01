@@ -11,9 +11,6 @@ siwe_login.settings:
     message_ttl:
       type: integer
       label: "Message TTL"
-    allow_registration:
-      type: boolean
-      label: "Allow registration"
     require_ens_or_username:
       type: boolean
       label: "Require ENS or Username"

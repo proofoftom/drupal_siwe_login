@@ -56,13 +56,6 @@ class SiweSettingsForm extends ConfigFormBase
       '#min' => 1,
     ];
 
-    $form['allow_registration'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Allow Registration'),
-      '#default_value' => $config->get('allow_registration'),
-      '#description' => $this->t('Allow new users to register using SIWE.'),
-    ];
-
     $form['require_ens_or_username'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Require ENS or Username'),
@@ -97,7 +90,6 @@ class SiweSettingsForm extends ConfigFormBase
     $this->config('siwe_login.settings')
       ->set('nonce_ttl', $form_state->getValue('nonce_ttl'))
       ->set('message_ttl', $form_state->getValue('message_ttl'))
-      ->set('allow_registration', $form_state->getValue('allow_registration'))
       ->set('require_email_verification', $form_state->getValue('require_email_verification'))
       ->set('require_ens_or_username', $form_state->getValue('require_ens_or_username'))
       ->set('session_timeout', $form_state->getValue('session_timeout'))
