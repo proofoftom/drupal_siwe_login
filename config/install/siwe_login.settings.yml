@@ -1,6 +1,7 @@
-expected_domain: ''
+expected_domain: ""
 nonce_ttl: 300
 message_ttl: 600
 allow_registration: true
+require_ens_or_username: false
 require_email_verification: false
 session_timeout: 86400

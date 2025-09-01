@@ -93,6 +93,17 @@ class SiweAuthService
   }
 
   /**
+   * Checks if ENS or username is required for new users.
+   *
+   * @return bool
+   *   TRUE if ENS or username is required, FALSE otherwise.
+   */
+  public function isEnsOrUsernameRequired(): bool
+  {
+    return $this->config->get('require_ens_or_username');
+  }
+
+  /**
    * Extracts ENS name from SIWE message resources.
    */
   private function extractEnsNameFromMessage(string $message): ?string

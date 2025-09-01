@@ -89,7 +89,7 @@ class SiweAuthController extends ControllerBase
             'redirect' => '/siwe/email-verification',
           ]);
         }
-        
+
         // If user exists but doesn't have an email or has a temporary email, redirect to email verification form
         if ($user && (empty($user->getEmail()) || strpos($user->getEmail(), '@ethereum.local') !== FALSE)) {
           // Store the SIWE data in tempstore for later use
@@ -100,6 +100,50 @@ class SiweAuthController extends ControllerBase
             'success' => TRUE,
             'redirect' => '/siwe/email-verification',
           ]);
+        }
+      }
+
+      // Check if ENS/username is required
+      if ($this->siweAuthService->isEnsOrUsernameRequired()) {
+        // Extract ENS name from the raw message
+        $ensName = NULL;
+        if (isset($data['message'])) {
+          try {
+            $validator = $this->siweAuthService->getMessageValidator();
+            $parsed = $validator->parseSiweMessage($data['message']);
+
+            if (isset($parsed['resources']) && !empty($parsed['resources'])) {
+              foreach ($parsed['resources'] as $resource) {
+                if (strpos($resource, 'ens:') === 0) {
+                  $ensName = substr($resource, 4); // Remove 'ens:' prefix
+                  break;
+                }
+              }
+            }
+          } catch (\Exception $e) {
+            $this->getLogger('siwe_login')->warning('Failed to extract ENS name from SIWE message: @message', [
+              '@message' => $e->getMessage(),
+            ]);
+          }
+        }
+
+        // If user doesn't have an ENS name, redirect to username creation form
+        if (!$ensName) {
+          // Check if user exists
+          $user_manager = $this->siweAuthService->getUserManager();
+          $user = $user_manager->findUserByAddress($data['address']);
+
+          // If user doesn't exist or has a generated username, redirect to username creation form
+          if (!$user || $user_manager->isGeneratedUsername($user->getAccountName(), $data['address'])) {
+            // Store the SIWE data in tempstore for later use
+            $tempstore = \Drupal::service('tempstore.private')->get('siwe_login');
+            $tempstore->set('pending_siwe_data', $data);
+
+            return new JsonResponse([
+              'success' => TRUE,
+              'redirect' => '/siwe/create-username',
+            ]);
+          }
         }
       }
 

@@ -14,6 +14,9 @@ siwe_login.settings:
     allow_registration:
       type: boolean
       label: "Allow registration"
+    require_ens_or_username:
+      type: boolean
+      label: "Require ENS or Username"
     require_email_verification:
       type: boolean
       label: "Require email verification"

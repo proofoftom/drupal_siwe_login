@@ -38,6 +38,16 @@ siwe_login.email_verification_confirm:
   options:
     _admin_route: FALSE
 
+siwe_login.username_creation_form:
+  path: '/siwe/create-username'
+  defaults:
+    _form: '\Drupal\siwe_login\Form\UsernameCreationForm'
+    _title: 'Create Username'
+  requirements:
+    _access: 'TRUE'
+  options:
+    _admin_route: FALSE
+
 siwe_login.settings:
   path: '/admin/config/people/siwe'
   defaults:

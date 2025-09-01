@@ -107,6 +107,46 @@ class EmailVerificationController extends ControllerBase {
     $user = $user_manager->findOrCreateUserWithEmail($siwe_data['address'], $siwe_data);
 
     if ($user) {
+      // Check if ENS/username is required and user doesn't have an ENS name
+      $config = \Drupal::config('siwe_login.settings');
+      if ($config->get('require_ens_or_username')) {
+        // Extract ENS name from the raw message.
+        $ensName = NULL;
+        if (isset($siwe_data['message'])) {
+          try {
+            $validator = \Drupal::service('siwe_login.message_validator');
+            $parsed = $validator->parseSiweMessage($siwe_data['message']);
+            
+            if (isset($parsed['resources']) && !empty($parsed['resources'])) {
+              foreach ($parsed['resources'] as $resource) {
+                if (strpos($resource, 'ens:') === 0) {
+                  $ensName = substr($resource, 4); // Remove 'ens:' prefix
+                  break;
+                }
+              }
+            }
+          } catch (\Exception $e) {
+            $this->getLogger('siwe_login')->warning('Failed to extract ENS name from SIWE message: @message', [
+              '@message' => $e->getMessage(),
+            ]);
+          }
+        }
+
+        // If user doesn't have an ENS name and has a generated username, redirect to username creation form
+        if (!$ensName && $user_manager->isGeneratedUsername($user->getAccountName(), $siwe_data['address'])) {
+          // Store the SIWE data in tempstore for later use
+          $tempstore->set('pending_siwe_data', $siwe_data);
+          
+          // Clear the verification tempstore.
+          $tempstore->delete('verification_' . $hash);
+          
+          $this->messenger()->addStatus($this->t('Email verified successfully. Please create a username for your account.'));
+          
+          // Redirect to username creation form.
+          return $this->redirect('siwe_login.username_creation_form');
+        }
+      }
+
       // Clear the tempstore.
       $tempstore->delete('verification_' . $hash);
 

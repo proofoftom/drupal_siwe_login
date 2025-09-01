@@ -34,9 +34,12 @@ The SIWE Login module handles domain validation based on the configuration set b
 - **Message TTL**: Time-to-live for SIWE messages in seconds
 - **Allow Registration**: Allow new users to register using SIWE
 - **Require Email Verification**: Require email verification for new users
+- **Require ENS or Username**: Require users to set a username if they don't have an ENS name
 - **Session Timeout**: Session timeout in seconds
 
 When "Require Email Verification" is enabled, new users will be directed to an email verification form during their first login. Existing users without a verified email address will also be prompted to provide one.
+
+When "Require ENS or Username" is enabled, new users without an ENS name will be directed to a username creation form during their first login.
 
 ## Email Verification
 
@@ -48,6 +51,15 @@ When email verification is required, the following flow occurs:
 4. A verification email is sent to the provided address
 5. User clicks the verification link in the email
 6. User account is created/updated and the user is logged in
+
+## Username Creation
+
+When username creation is required, the following flow occurs:
+
+1. User signs SIWE message with their Ethereum wallet
+2. If the user doesn't have an ENS name and doesn't have a custom username, they are redirected to a username creation form
+3. User provides their desired username
+4. User account is created with the provided username and the user is logged in
 
 ## Security
 
@@ -69,6 +81,7 @@ This module implements the SIWE authentication flow:
 3. The signature is verified using the kornrunner/keccak and simplito/elliptic-php libraries
 4. If the signature is valid:
    - If email verification is required and the user doesn't exist or doesn't have a verified email, they are redirected to an email verification form
+   - If username creation is required and the user doesn't have an ENS name, they are redirected to a username creation form
    - Otherwise, a user account is created or updated with the Ethereum address
 5. The user is logged in
 

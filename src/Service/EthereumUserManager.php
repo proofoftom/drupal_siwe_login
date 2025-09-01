@@ -137,6 +137,70 @@ class EthereumUserManager
   }
 
   /**
+   * Creates a user with a specific username.
+   *
+   * @param string $address
+   *   The Ethereum wallet address.
+   * @param array $data
+   *   Additional user data including username.
+   *
+   * @return \Drupal\user\UserInterface
+   *   The user entity.
+   */
+  public function createUserWithUsername(string $address, array $data): UserInterface
+  {
+    $normalized_address = $this->normalizeAddress($address);
+
+    // Use provided username or ENS name from the verified SIWE message
+    $username = $data['username'] ?? $data['ensName'] ?? $this->generateUsername($normalized_address);
+    $email = $data['email'] ?? $this->generateEmail($normalized_address);
+
+    $user_storage = $this->entityTypeManager->getStorage('user');
+
+    $user = $user_storage->create([
+      'name' => $username,
+      'mail' => $email,
+      'field_ethereum_address' => $normalized_address,
+      'status' => 1,
+      'langcode' => $this->languageManager->getCurrentLanguage()->getId(),
+    ]);
+
+    $user->save();
+
+    $this->logger->info('Created new user <strong>@name</strong> for Ethereum address @address', [
+      'name' => $username,
+      'address' => $normalized_address,
+    ]);
+
+    /** @var \Drupal\user\UserInterface $user */
+    return $user;
+  }
+
+  /**
+   * Updates a user's username.
+   *
+   * @param \Drupal\user\UserInterface $user
+   *   The user entity to update.
+   * @param string $username
+   *   The new username.
+   *
+   * @return \Drupal\user\UserInterface
+   *   The updated user entity.
+   */
+  public function updateUserUsername(UserInterface $user, string $username): UserInterface
+  {
+    $user->set('name', $username);
+    $user->save();
+
+    $this->logger->info('Updated username for user <strong>@name</strong> with Ethereum address @address', [
+      'name' => $username,
+      'address' => $user->get('field_ethereum_address')->value,
+    ]);
+
+    return $user;
+  }
+
+  /**
    * Finds or creates a user by Ethereum address with a specific email.
    *
    * @param string $address
@@ -162,7 +226,7 @@ class EthereumUserManager
         $user->set('mail', $data['email']);
         $user->save();
       }
-      
+
       // Update last login and any additional data
       $this->updateUserData($user, $data);
     }
@@ -235,7 +299,7 @@ class EthereumUserManager
   /**
    * Generates a unique username from address.
    */
-  protected function generateUsername(string $address): string
+  public function generateUsername(string $address): string
   {
     $base_username = 'eth_' . substr($address, 2, 8);
     $username = $base_username;
@@ -266,5 +330,34 @@ class EthereumUserManager
       ->loadByProperties(['name' => $username]);
 
     return !empty($users);
+  }
+
+  /**
+   * Checks if a username looks like a generated one.
+   *
+   * @param string $username
+   *   The username to check.
+   * @param string $address
+   *   The Ethereum address.
+   *
+   * @return bool
+   *   TRUE if the username looks like a generated one, FALSE otherwise.
+   */
+  public function isGeneratedUsername(string $username, string $address): bool
+  {
+    $normalized_address = $this->normalizeAddress($address);
+    $base_username = 'eth_' . substr($normalized_address, 2, 8);
+    
+    // Check if it matches the base pattern
+    if ($username === $base_username) {
+      return TRUE;
+    }
+    
+    // Check if it matches the pattern with a number suffix
+    if (preg_match('/^' . preg_quote($base_username) . '_\d+$/', $username)) {
+      return TRUE;
+    }
+    
+    return FALSE;
   }
 }
