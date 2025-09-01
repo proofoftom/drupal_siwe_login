@@ -1,6 +1,7 @@
 siwe_login_library:
   version: 1.x
   js:
+    https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js: { type: external }
     js/siwe-browser-wrapper.js: {}
     js/siwe-login.js: {}
   dependencies:

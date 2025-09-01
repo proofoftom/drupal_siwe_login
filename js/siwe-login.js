@@ -19,6 +19,35 @@
             method: "eth_requestAccounts",
           });
           const address = accounts[0];
+          const checksumAddress = ethers.getAddress(address);
+
+          // Create ethers provider from window.ethereum
+          const provider = new ethers.BrowserProvider(window.ethereum);
+
+          // Lookup ENS name
+          let ensName = null;
+
+          try {
+            // Lookup ENS name for the address
+            ensName = await provider.lookupAddress(address);
+
+            // Verify forward resolution if we got an ENS name
+            if (ensName) {
+              const resolvedAddress = await provider.resolveName(ensName);
+              // Convert both addresses to checksum format for comparison
+              const checksumAddress = ethers.getAddress(address);
+              const checksumResolvedAddress =
+                ethers.getAddress(resolvedAddress);
+
+              // If verification fails, reset to null
+              if (checksumResolvedAddress !== checksumAddress) {
+                ensName = null;
+              }
+            }
+          } catch (ensError) {
+            // ENS lookup failed, continue without ENS name
+            console.warn("ENS lookup failed:", ensError);
+          }
 
           // Get nonce from server
           const nonceResponse = await fetch("/siwe/nonce");
@@ -27,26 +56,30 @@
             method: "eth_chainId",
           });
 
-          // Create SIWE message
-          const message = new SiweMessage({
+          // Prepare SIWE message parameters
+          const messageParams = {
             domain: window.location.host,
-            address,
+            address: checksumAddress,
             statement: "Sign in with Ethereum to Drupal",
             uri: window.location.origin,
             version: "1",
             chainId: parseInt(chainId, 16),
             nonce: nonce,
             issuedAt: new Date().toISOString(),
-          });
+          };
+
+          // Add ENS name as resource if available
+          if (ensName) {
+            messageParams.resources = [`ens:${ensName}`];
+          }
+
+          // Create SIWE message
+          const message = new SiweMessage(messageParams);
           const preparedMessage = message.prepareMessage();
 
-          // Sign message
-          // TODO: For whatever reason this appears in MetaMask as a "Signature request" whereas
-          // when using ethers.js in @next/components/auth/SiweLogin.tsx it appears as a "Sign-in request" - research further
-          const signature = await window.ethereum.request({
-            method: "personal_sign",
-            params: [preparedMessage, address],
-          });
+          // Sign message using ethers.js (similar to Next.js implementation)
+          const signer = await provider.getSigner();
+          const signature = await signer.signMessage(preparedMessage);
 
           // Verify with server
           const verifyResponse = await fetch("/siwe/verify", {
