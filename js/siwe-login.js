@@ -65,8 +65,13 @@
           const result = await verifyResponse.json();
 
           if (result.success) {
-            // Redirect or update UI
-            window.location.reload();
+            // Handle redirect if provided (for email verification)
+            if (result.redirect) {
+              window.location.href = result.redirect;
+            } else {
+              // Redirect or update UI
+              window.location.reload();
+            }
           }
         } catch (error) {
           console.error("SIWE authentication failed:", error);

@@ -24,3 +24,7 @@ services:
       - "@logger.factory"
       - "@current_user"
       - "@language_manager"
+
+  siwe_login.mail:
+    class: Drupal\siwe_login\Plugin\Mail\SiweMail
+    tag: mail

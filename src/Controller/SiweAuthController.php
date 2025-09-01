@@ -63,7 +63,47 @@ class SiweAuthController extends ControllerBase
         throw new \InvalidArgumentException('Invalid request data');
       }
 
-      // Verify SIWE message
+      // Validate the SIWE message first
+      $is_valid = $this->siweAuthService->getMessageValidator()->validateMessage($data);
+
+      if (!$is_valid) {
+        return new JsonResponse([
+          'error' => 'Invalid SIWE message',
+        ], 400);
+      }
+
+      // Check if email verification is required
+      if ($this->siweAuthService->isEmailVerificationRequired()) {
+        // Check if user exists
+        $user_manager = $this->siweAuthService->getUserManager();
+        $user = $user_manager->findUserByAddress($data['address']);
+
+        // If user doesn't exist, redirect to email verification form
+        if (!$user) {
+          // Store the SIWE data in tempstore for later use
+          $tempstore = \Drupal::service('tempstore.private')->get('siwe_login');
+          $tempstore->set('pending_siwe_data', $data);
+
+          return new JsonResponse([
+            'success' => TRUE,
+            'redirect' => '/siwe/email-verification',
+          ]);
+        }
+        
+        // If user exists but doesn't have an email or has a temporary email, redirect to email verification form
+        if ($user && (empty($user->getEmail()) || strpos($user->getEmail(), '@ethereum.local') !== FALSE)) {
+          // Store the SIWE data in tempstore for later use
+          $tempstore = \Drupal::service('tempstore.private')->get('siwe_login');
+          $tempstore->set('pending_siwe_data', $data);
+
+          return new JsonResponse([
+            'success' => TRUE,
+            'redirect' => '/siwe/email-verification',
+          ]);
+        }
+      }
+
+      // Verify SIWE message and authenticate user
       $user = $this->siweAuthService->authenticate($data);
 
       if ($user) {

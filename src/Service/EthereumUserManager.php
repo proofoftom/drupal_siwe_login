@@ -104,6 +104,107 @@ class EthereumUserManager
   }
 
   /**
+   * Creates a temporary user with email but doesn't save it to the database.
+   *
+   * @param string $address
+   *   The Ethereum wallet address.
+   * @param array $data
+   *   Additional user data including email.
+   *
+   * @return \Drupal\user\UserInterface
+   *   The temporary user entity.
+   */
+  public function createTempUserWithEmail(string $address, array $data): UserInterface
+  {
+    $normalized_address = $this->normalizeAddress($address);
+
+    // Use ENS name from the verified SIWE message
+    $ens_name = $data['ensName'] ?? NULL;
+    $email = $data['email'] ?? $this->generateEmail($normalized_address);
+    $username = $ens_name ?: $this->generateUsername($normalized_address);
+
+    $user_storage = $this->entityTypeManager->getStorage('user');
+
+    $user = $user_storage->create([
+      'name' => $username,
+      'mail' => $email,
+      'field_ethereum_address' => $normalized_address,
+      'status' => 1,
+      'langcode' => $this->languageManager->getCurrentLanguage()->getId(),
+    ]);
+
+    return $user;
+  }
+
+  /**
+   * Finds or creates a user by Ethereum address with a specific email.
+   *
+   * @param string $address
+   *   The Ethereum wallet address.
+   * @param array $data
+   *   Additional user data including email.
+   *
+   * @return \Drupal\user\UserInterface
+   *   The user entity.
+   */
+  public function findOrCreateUserWithEmail(string $address, array $data): UserInterface
+  {
+    $address = $this->normalizeAddress($address);
+
+    // Try to find existing user
+    $user = $this->findUserByAddress($address);
+
+    if (!$user) {
+      $user = $this->createUserFromAddressWithEmail($address, $data);
+    } else {
+      // Update the user's email if provided
+      if (isset($data['email']) && !empty($data['email'])) {
+        $user->set('mail', $data['email']);
+        $user->save();
+      }
+      
+      // Update last login and any additional data
+      $this->updateUserData($user, $data);
+    }
+
+    return $user;
+  }
+
+  /**
+   * Creates a new user from an Ethereum address with a specific email.
+   */
+  protected function createUserFromAddressWithEmail(string $address, array $data): UserInterface
+  {
+    $normalized_address = $this->normalizeAddress($address);
+
+    // Use ENS name from the verified SIWE message
+    $ens_name = $data['ensName'] ?? NULL;
+    $email = $data['email'] ?? $this->generateEmail($normalized_address);
+    $username = $ens_name ?: $this->generateUsername($normalized_address);
+
+    $user_storage = $this->entityTypeManager->getStorage('user');
+
+    $user = $user_storage->create([
+      'name' => $username,
+      'mail' => $email,
+      'field_ethereum_address' => $normalized_address,
+      'status' => 1,
+      'langcode' => $this->languageManager->getCurrentLanguage()->getId(),
+    ]);
+
+    $user->save();
+
+    $this->logger->info('Created new user <strong>@name</strong> for Ethereum address @address with email @email', [
+      '@name' => $username,
+      '@address' => $normalized_address,
+      '@email' => $email,
+    ]);
+
+    /** @var \Drupal\user\UserInterface $user */
+    return $user;
+  }
+
+  /**
    * Updates user data from SIWE message.
    */
   protected function updateUserData(UserInterface $user, array $data): void

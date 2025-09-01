@@ -36,11 +36,25 @@ The SIWE Login module handles domain validation based on the configuration set b
 - **Require Email Verification**: Require email verification for new users
 - **Session Timeout**: Session timeout in seconds
 
+When "Require Email Verification" is enabled, new users will be directed to an email verification form during their first login. Existing users without a verified email address will also be prompted to provide one.
+
+## Email Verification
+
+When email verification is required, the following flow occurs:
+
+1. User signs SIWE message with their Ethereum wallet
+2. If the user doesn't exist or doesn't have a verified email, they are redirected to an email verification form
+3. User provides their email address
+4. A verification email is sent to the provided address
+5. User clicks the verification link in the email
+6. User account is created/updated and the user is logged in
+
 ## Security
 
 - Uses EIP-191 message signing standard
 - Implements nonce-based replay attack prevention
 - Configurable token expiration
+- Email verification for new users when enabled
 
 ## Support
 
@@ -53,7 +67,9 @@ This module implements the SIWE authentication flow:
 1. A nonce is generated and stored in the cache
 2. The user signs a SIWE message with their Ethereum wallet
 3. The signature is verified using the kornrunner/keccak and simplito/elliptic-php libraries
-4. If the signature is valid, a user account is created or updated with the Ethereum address
+4. If the signature is valid:
+   - If email verification is required and the user doesn't exist or doesn't have a verified email, they are redirected to an email verification form
+   - Otherwise, a user account is created or updated with the Ethereum address
 5. The user is logged in
 
 ## Field Requirements

@@ -82,6 +82,17 @@ class SiweAuthService
   }
 
   /**
+   * Checks if email verification is required for new users.
+   *
+   * @return bool
+   *   TRUE if email verification is required, FALSE otherwise.
+   */
+  public function isEmailVerificationRequired(): bool
+  {
+    return $this->config->get('require_email_verification');
+  }
+
+  /**
    * Extracts ENS name from SIWE message resources.
    */
   private function extractEnsNameFromMessage(string $message): ?string
@@ -106,6 +117,28 @@ class SiweAuthService
       ]);
       return NULL;
     }
+  }
+
+  /**
+   * Gets the message validator.
+   *
+   * @return \Drupal\siwe_login\Service\SiweMessageValidator
+   *   The message validator.
+   */
+  public function getMessageValidator(): SiweMessageValidator
+  {
+    return $this->messageValidator;
+  }
+
+  /**
+   * Gets the user manager.
+   *
+   * @return \Drupal\siwe_login\Service\EthereumUserManager
+   *   The user manager.
+   */
+  public function getUserManager(): EthereumUserManager
+  {
+    return $this->userManager;
   }
 
 }
