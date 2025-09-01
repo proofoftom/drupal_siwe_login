@@ -32,12 +32,9 @@ class SiweSettingsForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('siwe_login.settings');
 
-    $form['expected_domain'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Expected Domain'),
-      '#default_value' => $config->get('expected_domain'),
-      '#description' => $this->t('The domain that should be expected in SIWE messages.'),
-    ];
+    // Note: The expected_domain setting is managed automatically by SIWE Server
+    // when present, or defaults to the current host when SIWE Server is not used.
+    // It is not exposed in the UI to simplify configuration.
 
     $form['nonce_ttl'] = [
       '#type' => 'number',
@@ -84,8 +81,8 @@ class SiweSettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+    // Save all settings except expected_domain, which is managed automatically
     $this->config('siwe_login.settings')
-      ->set('expected_domain', $form_state->getValue('expected_domain'))
       ->set('nonce_ttl', $form_state->getValue('nonce_ttl'))
       ->set('message_ttl', $form_state->getValue('message_ttl'))
       ->set('allow_registration', $form_state->getValue('allow_registration'))

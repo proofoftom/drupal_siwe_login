@@ -26,6 +26,16 @@ This module provides Ethereum wallet-based authentication for Drupal using the S
 
 See `/admin/config/people/siwe` for configuration options.
 
+### Settings
+
+The SIWE Login module handles domain validation based on the configuration set by the SIWE Server module. When used standalone, it validates against the current Drupal host. When used with SIWE Server, it validates against the domains configured in the SIWE Server settings. The following settings are available:
+
+- **Nonce TTL**: Time-to-live for nonces in seconds
+- **Message TTL**: Time-to-live for SIWE messages in seconds
+- **Allow Registration**: Allow new users to register using SIWE
+- **Require Email Verification**: Require email verification for new users
+- **Session Timeout**: Session timeout in seconds
+
 ## Security
 
 - Uses EIP-191 message signing standard

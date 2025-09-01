@@ -204,21 +204,31 @@ class SiweMessageValidator
   }
 
   /**
-   * Validates domain matches current site.
+   * Validates domain matches expected domain(s).
    */
   protected function validateDomain(array $message_data): void
   {
-    $expected_domain = $this->config->get('expected_domain') ?: \Drupal::request()->getHost();
+    // This config field may be updated by the SIWE Server module to include multiple domains
+    $expected_domain = $this->config->get('expected_domain');
 
-    // log the expected and actual domain for debugging
+    // Handle comma-separated domains
+    $expected_domains = array_map('trim', explode(',', $expected_domain));
+
+    // Filter out empty domains
+    $expected_domains = array_filter($expected_domains);
+
+    // Log the expected and actual domain for debugging
     \Drupal::logger('siwe_login')->debug('Validating domain. Expected: @expected, Actual: @actual', [
-      '@expected' => $expected_domain,
+      '@expected' => implode(', ', $expected_domains),
       '@actual' => $message_data['domain'],
     ]);
 
-    if ($message_data['domain'] !== $expected_domain) {
-      throw new InvalidSiweMessageException('Invalid domain');
+    // Check if the domain matches exactly
+    if (in_array($message_data['domain'], $expected_domains)) {
+      return;
     }
+
+    throw new InvalidSiweMessageException('Invalid domain');
   }
 
   /**

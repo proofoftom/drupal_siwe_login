@@ -1,0 +1,17 @@
+<?php
+
+/**
+ * @file
+ * Install hooks for the SIWE Login module.
+ */
+
+use Drupal\Core\Config\ConfigFactoryInterface;
+
+/**
+ * Implements hook_install().
+ */
+function siwe_login_install() {
+  // Set the expected_domain to the current host during installation.
+  $config = \Drupal::configFactory()->getEditable('siwe_login.settings');
+  $config->set('expected_domain', \Drupal::request()->getHost())->save();
+}
