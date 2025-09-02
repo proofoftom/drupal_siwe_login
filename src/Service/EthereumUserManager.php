@@ -144,6 +144,7 @@ class EthereumUserManager {
 
     $user_storage = $this->entityTypeManager->getStorage('user');
 
+    /** @var \Drupal\user\UserInterface $user */
     $user = $user_storage->create([
       'name' => $username,
       'mail' => $email,

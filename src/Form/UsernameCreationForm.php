@@ -151,7 +151,10 @@ class UsernameCreationForm extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $username = $form_state->getValue('username');
 
-    // Get the pending SIWE data.
+    /**
+     * Get the pending SIWE data in tempstore.
+     * @var array $siwe_data
+     */
     $siwe_data = $this->tempStore->get('pending_siwe_data');
     if (!$siwe_data) {
       $this->messenger()->addError($this->t('No pending SIWE authentication found.'));

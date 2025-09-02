@@ -226,7 +226,10 @@ class EmailVerificationForm extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $email = $form_state->getValue('email');
 
-    // Get the pending SIWE data.
+    /**
+     * Get the pending SIWE data stored in tempstore.
+     * @var array $siwe_data
+     */
     $siwe_data = $this->tempStore->get('pending_siwe_data');
     if (!$siwe_data) {
       $this->messenger()->addError($this->t('No pending SIWE authentication found.'));
