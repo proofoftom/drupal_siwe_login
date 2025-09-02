@@ -17,43 +17,43 @@ siwe_login.verify:
     _admin_route: FALSE
 
 siwe_login.email_verification_form:
-  path: '/siwe/email-verification'
+  path: "/siwe/email-verification"
   defaults:
     _form: '\Drupal\siwe_login\Form\EmailVerificationForm'
-    _title: 'Email Verification'
+    _title: "Email Verification"
   requirements:
-    _access: 'TRUE'
+    _access: "TRUE"
   options:
     _admin_route: FALSE
 
 siwe_login.email_verification_confirm:
-  path: '/siwe/email-verification/{uid}/{timestamp}/{hash}'
+  path: "/siwe/email-verification/{uid}/{timestamp}/{hash}"
   defaults:
     _controller: '\Drupal\siwe_login\Controller\EmailVerificationController::confirm'
-    _title: 'Email Verification Confirmation'
+    _title: "Email Verification Confirmation"
     uid: 0
   requirements:
-    _access: 'TRUE'
+    _access: "TRUE"
     uid: \d*
   options:
     _admin_route: FALSE
 
 siwe_login.username_creation_form:
-  path: '/siwe/create-username'
+  path: "/siwe/create-username"
   defaults:
     _form: '\Drupal\siwe_login\Form\UsernameCreationForm'
-    _title: 'Create Username'
+    _title: "Create Username"
   requirements:
-    _access: 'TRUE'
+    _access: "TRUE"
   options:
     _admin_route: FALSE
 
 siwe_login.settings:
-  path: '/admin/config/people/siwe'
+  path: "/admin/config/people/siwe"
   defaults:
     _form: '\Drupal\siwe_login\Form\SiweSettingsForm'
-    _title: 'SIWE Login Settings'
+    _title: "SIWE Login Settings"
   requirements:
-    _permission: 'administer siwe login settings'
+    _permission: "administer siwe login settings"
   options:
     _admin_route: TRUE

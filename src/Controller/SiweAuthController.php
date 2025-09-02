@@ -11,18 +11,18 @@ use Drupal\siwe_login\Service\SiweAuthService;
 /**
  * Controller for SIWE authentication endpoints.
  */
-class SiweAuthController extends ControllerBase
-{
+class SiweAuthController extends ControllerBase {
 
   protected $siweAuthService;
 
-  public function __construct(SiweAuthService $siwe_auth_service)
-  {
+  public function __construct(SiweAuthService $siwe_auth_service) {
     $this->siweAuthService = $siwe_auth_service;
   }
 
-  public static function create(ContainerInterface $container)
-  {
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
     return new static(
       $container->get('siwe_login.auth_service')
     );
@@ -31,8 +31,7 @@ class SiweAuthController extends ControllerBase
   /**
    * Generates a nonce for SIWE.
    */
-  public function getNonce(Request $request): JsonResponse
-  {
+  public function getNonce(Request $request): JsonResponse {
     try {
       $nonce = $this->siweAuthService->generateNonce();
 
@@ -40,22 +39,27 @@ class SiweAuthController extends ControllerBase
       $ttl = \Drupal::config('siwe_login.settings')->get('nonce_ttl');
       \Drupal::cache()->set('siwe_nonce_lookup:' . $nonce, TRUE, time() + $ttl);
 
-      return new JsonResponse([
-        'nonce' => $nonce,
-        'issued_at' => date('c'),
-      ]);
-    } catch (\Exception $e) {
-      return new JsonResponse([
-        'error' => 'Failed to generate nonce',
-      ], 500);
+      return new JsonResponse(
+        [
+          'nonce' => $nonce,
+          'issued_at' => date('c'),
+        ]
+      );
+    }
+    catch (\Exception $e) {
+      return new JsonResponse(
+        [
+          'error' => 'Failed to generate nonce',
+        ],
+        500
+      );
     }
   }
 
   /**
    * Verifies SIWE message and authenticates user.
    */
-  public function verify(Request $request): JsonResponse
-  {
+  public function verify(Request $request): JsonResponse {
     try {
       $data = json_decode($request->getContent(), TRUE);
 
@@ -63,49 +67,56 @@ class SiweAuthController extends ControllerBase
         throw new \InvalidArgumentException('Invalid request data');
       }
 
-      // Validate the SIWE message first
+      // Validate the SIWE message first.
       $is_valid = $this->siweAuthService->getMessageValidator()->validateMessage($data);
 
       if (!$is_valid) {
-        return new JsonResponse([
-          'error' => 'Invalid SIWE message',
-        ], 400);
+        return new JsonResponse(
+          [
+            'error' => 'Invalid SIWE message',
+          ],
+          400
+        );
       }
 
-      // Check if email verification is required
+      // Check if email verification is required.
       if ($this->siweAuthService->isEmailVerificationRequired()) {
-        // Check if user exists
+        // Check if user exists.
         $user_manager = $this->siweAuthService->getUserManager();
         $user = $user_manager->findUserByAddress($data['address']);
 
-        // If user doesn't exist, redirect to email verification form
+        // If user doesn't exist, redirect to email verification form.
         if (!$user) {
-          // Store the SIWE data in tempstore for later use
+          // Store the SIWE data in tempstore for later use.
           $tempstore = \Drupal::service('tempstore.private')->get('siwe_login');
           $tempstore->set('pending_siwe_data', $data);
 
-          return new JsonResponse([
-            'success' => TRUE,
-            'redirect' => '/siwe/email-verification',
-          ]);
+          return new JsonResponse(
+            [
+              'success' => TRUE,
+              'redirect' => '/siwe/email-verification',
+            ]
+          );
         }
 
-        // If user exists but doesn't have an email or has a temporary email, redirect to email verification form
+        // If user exists but doesn't have an email or has a temporary email, redirect to email verification form.
         if ($user && (empty($user->getEmail()) || strpos($user->getEmail(), '@ethereum.local') !== FALSE)) {
-          // Store the SIWE data in tempstore for later use
+          // Store the SIWE data in tempstore for later use.
           $tempstore = \Drupal::service('tempstore.private')->get('siwe_login');
           $tempstore->set('pending_siwe_data', $data);
 
-          return new JsonResponse([
-            'success' => TRUE,
-            'redirect' => '/siwe/email-verification',
-          ]);
+          return new JsonResponse(
+            [
+              'success' => TRUE,
+              'redirect' => '/siwe/email-verification',
+            ]
+          );
         }
       }
 
-      // Check if ENS/username is required
+      // Check if ENS/username is required.
       if ($this->siweAuthService->isEnsOrUsernameRequired()) {
-        // Extract ENS name from the raw message
+        // Extract ENS name from the raw message.
         $ensName = NULL;
         if (isset($data['message'])) {
           try {
@@ -115,66 +126,86 @@ class SiweAuthController extends ControllerBase
             if (isset($parsed['resources']) && !empty($parsed['resources'])) {
               foreach ($parsed['resources'] as $resource) {
                 if (strpos($resource, 'ens:') === 0) {
-                  $ensName = substr($resource, 4); // Remove 'ens:' prefix
+                  // Remove 'ens:' prefix.
+                  $ensName = substr($resource, 4);
                   break;
                 }
               }
             }
-          } catch (\Exception $e) {
-            $this->getLogger('siwe_login')->warning('Failed to extract ENS name from SIWE message: @message', [
-              '@message' => $e->getMessage(),
-            ]);
+          }
+          catch (\Exception $e) {
+            $this->getLogger('siwe_login')->warning(
+              'Failed to extract ENS name from SIWE message: @message',
+              [
+                '@message' => $e->getMessage(),
+              ]
+            );
           }
         }
 
-        // If user doesn't have an ENS name, redirect to username creation form
+        // If user doesn't have an ENS name, redirect to username creation form.
         if (!$ensName) {
-          // Check if user exists
+          // Check if user exists.
           $user_manager = $this->siweAuthService->getUserManager();
           $user = $user_manager->findUserByAddress($data['address']);
 
-          // If user doesn't exist or has a generated username, redirect to username creation form
+          // If user doesn't exist or has a generated username, redirect to username creation form.
           if (!$user || $user_manager->isGeneratedUsername($user->getAccountName(), $data['address'])) {
-            // Store the SIWE data in tempstore for later use
+            // Store the SIWE data in tempstore for later use.
             $tempstore = \Drupal::service('tempstore.private')->get('siwe_login');
             $tempstore->set('pending_siwe_data', $data);
 
-            return new JsonResponse([
-              'success' => TRUE,
-              'redirect' => '/siwe/create-username',
-            ]);
+            return new JsonResponse(
+              [
+                'success' => TRUE,
+                'redirect' => '/siwe/create-username',
+              ]
+            );
           }
         }
       }
 
-      // Verify SIWE message and authenticate user
+      // Verify SIWE message and authenticate user.
       $user = $this->siweAuthService->authenticate($data);
 
       if ($user) {
-        // User authenticated successfully
+        // User authenticated successfully.
         user_login_finalize($user);
 
-        return new JsonResponse([
-          'success' => TRUE,
-          'user' => [
-            'uid' => $user->id(),
-            'name' => $user->getAccountName(),
-            'address' => $user->get('field_ethereum_address')->value,
-          ],
-        ]);
+        return new JsonResponse(
+          [
+            'success' => TRUE,
+            'user' => [
+              'uid' => $user->id(),
+              'name' => $user->getAccountName(),
+              'address' => $user->get('field_ethereum_address')->value,
+            ],
+          ]
+        );
       }
 
-      return new JsonResponse([
-        'error' => 'Authentication failed',
-      ], 401);
-    } catch (\Exception $e) {
-      $this->getLogger('siwe_login')->error('SIWE verification failed: @message', [
-        '@message' => $e->getMessage(),
-      ]);
+      return new JsonResponse(
+        [
+          'error' => 'Authentication failed',
+        ],
+        401
+      );
+    }
+    catch (\Exception $e) {
+      $this->getLogger('siwe_login')->error(
+        'SIWE verification failed: @message',
+        [
+          '@message' => $e->getMessage(),
+        ]
+      );
 
-      return new JsonResponse([
-        'error' => $e->getMessage(),
-      ], 400);
+      return new JsonResponse(
+        [
+          'error' => $e->getMessage(),
+        ],
+        400
+      );
     }
   }
+
 }

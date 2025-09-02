@@ -12,8 +12,7 @@ use Drupal\user\UserInterface;
 /**
  * Service for handling SIWE authentication.
  */
-class SiweAuthService
-{
+class SiweAuthService {
 
   protected $entityTypeManager;
   protected $session;
@@ -30,7 +29,7 @@ class SiweAuthService
     LoggerChannelFactoryInterface $logger_factory,
     SiweMessageValidator $message_validator,
     EthereumUserManager $user_manager,
-    ConfigFactoryInterface $config_factory
+    ConfigFactoryInterface $config_factory,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->session = $session;
@@ -44,8 +43,7 @@ class SiweAuthService
   /**
    * Generates a nonce for SIWE.
    */
-  public function generateNonce(): string
-  {
+  public function generateNonce(): string {
     // Generate a cryptographically secure random nonce.
     return bin2hex(random_bytes(16));
   }
@@ -53,27 +51,27 @@ class SiweAuthService
   /**
    * Authenticates a user using SIWE.
    */
-  public function authenticate(array $data): ?UserInterface
-  {
+  public function authenticate(array $data): ?UserInterface {
     try {
-      // Validate the SIWE message
+      // Validate the SIWE message.
       $is_valid = $this->messageValidator->validateMessage($data);
 
       if (!$is_valid) {
         return NULL;
       }
 
-      // Extract ENS name from the raw message
+      // Extract ENS name from the raw message.
       $ensName = $this->extractEnsNameFromMessage($data['message']);
 
-      // Add ENS name to the data passed to user manager
+      // Add ENS name to the data passed to user manager.
       $data['ensName'] = $ensName;
 
-      // Find or create user
+      // Find or create user.
       $user = $this->userManager->findOrCreateUser($data['address'], $data);
 
       return $user;
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
       $this->logger->error('SIWE authentication failed: @message', [
         '@message' => $e->getMessage(),
       ]);
@@ -87,8 +85,7 @@ class SiweAuthService
    * @return bool
    *   TRUE if email verification is required, FALSE otherwise.
    */
-  public function isEmailVerificationRequired(): bool
-  {
+  public function isEmailVerificationRequired(): bool {
     return $this->config->get('require_email_verification');
   }
 
@@ -98,31 +95,31 @@ class SiweAuthService
    * @return bool
    *   TRUE if ENS or username is required, FALSE otherwise.
    */
-  public function isEnsOrUsernameRequired(): bool
-  {
+  public function isEnsOrUsernameRequired(): bool {
     return $this->config->get('require_ens_or_username');
   }
 
   /**
    * Extracts ENS name from SIWE message resources.
    */
-  private function extractEnsNameFromMessage(string $message): ?string
-  {
+  private function extractEnsNameFromMessage(string $message): ?string {
     try {
-      // Parse the message to extract resources
+      // Parse the message to extract resources.
       $parsed = $this->messageValidator->parseSiweMessage($message);
 
-      // Extract ENS name from resources if available
+      // Extract ENS name from resources if available.
       if (isset($parsed['resources']) && !empty($parsed['resources'])) {
         foreach ($parsed['resources'] as $resource) {
           if (strpos($resource, 'ens:') === 0) {
-            return substr($resource, 4); // Remove 'ens:' prefix
+            // Remove 'ens:' prefix.
+            return substr($resource, 4);
           }
         }
       }
 
       return NULL;
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
       $this->logger->warning('Failed to extract ENS name from SIWE message: @message', [
         '@message' => $e->getMessage(),
       ]);
@@ -136,8 +133,7 @@ class SiweAuthService
    * @return \Drupal\siwe_login\Service\SiweMessageValidator
    *   The message validator.
    */
-  public function getMessageValidator(): SiweMessageValidator
-  {
+  public function getMessageValidator(): SiweMessageValidator {
     return $this->messageValidator;
   }
 
@@ -147,8 +143,7 @@ class SiweAuthService
    * @return \Drupal\siwe_login\Service\EthereumUserManager
    *   The user manager.
    */
-  public function getUserManager(): EthereumUserManager
-  {
+  public function getUserManager(): EthereumUserManager {
     return $this->userManager;
   }
 

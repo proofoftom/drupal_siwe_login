@@ -4,7 +4,6 @@ namespace Drupal\siwe_login\Plugin\Block;
 
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Url;
 
 /**
  * Provides a 'SIWE Login' block.
@@ -15,14 +14,12 @@ use Drupal\Core\Url;
  *   category = @Translation("Authentication"),
  * )
  */
-class SiweLoginBlock extends BlockBase
-{
+class SiweLoginBlock extends BlockBase {
 
   /**
    * {@inheritdoc}
    */
-  public function defaultConfiguration()
-  {
+  public function defaultConfiguration() {
     return [
       'button_text' => 'Sign in with Ethereum',
     ];
@@ -31,8 +28,7 @@ class SiweLoginBlock extends BlockBase
   /**
    * {@inheritdoc}
    */
-  public function blockForm($form, FormStateInterface $form_state)
-  {
+  public function blockForm($form, FormStateInterface $form_state) {
     $form['button_text'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Button text'),
@@ -45,16 +41,14 @@ class SiweLoginBlock extends BlockBase
   /**
    * {@inheritdoc}
    */
-  public function blockSubmit($form, FormStateInterface $form_state)
-  {
+  public function blockSubmit($form, FormStateInterface $form_state) {
     $this->configuration['button_text'] = $form_state->getValue('button_text');
   }
 
   /**
    * {@inheritdoc}
    */
-  public function build()
-  {
+  public function build() {
     return [
       '#type' => 'button',
       '#id' => 'siwe-login-button',
@@ -66,4 +60,5 @@ class SiweLoginBlock extends BlockBase
       ],
     ];
   }
+
 }

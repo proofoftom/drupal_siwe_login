@@ -58,20 +58,21 @@ class EmailVerificationController extends ControllerBase {
    *   If the verification information is incorrect or expired.
    */
   public function confirm($uid, $timestamp, $hash) {
-    // For temporary users, $uid might be 0. We'll validate using the hash instead.
+    // For temporary users, $uid might be 0.
+    // We'll validate using the hash instead.
     if ($uid > 0) {
       /** @var \Drupal\user\UserInterface $user */
       $user = $this->entityTypeManager()->getStorage('user')->load($uid);
-      
+
       if ($redirect = $this->determineErrorRedirect($user, $timestamp, $hash)) {
         return $redirect;
       }
     }
 
-    // Get the SIWE data from tempstore
+    // Get the SIWE data from tempstore.
     $tempstore = $this->tempStore->get('siwe_login');
     $siwe_data = $tempstore->get('verification_' . $hash);
-    
+
     if (!$siwe_data) {
       $this->messenger()->addError($this->t('The verification link is invalid or has expired.'));
       return $this->redirect('<front>');
@@ -83,16 +84,18 @@ class EmailVerificationController extends ControllerBase {
       try {
         $validator = \Drupal::service('siwe_login.message_validator');
         $parsed = $validator->parseSiweMessage($siwe_data['message']);
-        
+
         if (isset($parsed['resources']) && !empty($parsed['resources'])) {
           foreach ($parsed['resources'] as $resource) {
             if (strpos($resource, 'ens:') === 0) {
-              $ensName = substr($resource, 4); // Remove 'ens:' prefix
+              // Remove 'ens:' prefix.
+              $ensName = substr($resource, 4);
               break;
             }
           }
         }
-      } catch (\Exception $e) {
+      }
+      catch (\Exception $e) {
         $this->getLogger('siwe_login')->warning('Failed to extract ENS name from SIWE message: @message', [
           '@message' => $e->getMessage(),
         ]);
@@ -107,7 +110,7 @@ class EmailVerificationController extends ControllerBase {
     $user = $user_manager->findOrCreateUserWithEmail($siwe_data['address'], $siwe_data);
 
     if ($user) {
-      // Check if ENS/username is required and user doesn't have an ENS name
+      // Check if ENS/username is required and user doesn't have an ENS name.
       $config = \Drupal::config('siwe_login.settings');
       if ($config->get('require_ens_or_username')) {
         // Extract ENS name from the raw message.
@@ -116,32 +119,35 @@ class EmailVerificationController extends ControllerBase {
           try {
             $validator = \Drupal::service('siwe_login.message_validator');
             $parsed = $validator->parseSiweMessage($siwe_data['message']);
-            
+
             if (isset($parsed['resources']) && !empty($parsed['resources'])) {
               foreach ($parsed['resources'] as $resource) {
                 if (strpos($resource, 'ens:') === 0) {
-                  $ensName = substr($resource, 4); // Remove 'ens:' prefix
+                  // Remove 'ens:' prefix.
+                  $ensName = substr($resource, 4);
                   break;
                 }
               }
             }
-          } catch (\Exception $e) {
+          }
+          catch (\Exception $e) {
             $this->getLogger('siwe_login')->warning('Failed to extract ENS name from SIWE message: @message', [
               '@message' => $e->getMessage(),
             ]);
           }
         }
 
-        // If user doesn't have an ENS name and has a generated username, redirect to username creation form
+        // If user doesn't have an ENS name and has a generated username,
+        // redirect to username creation form.
         if (!$ensName && $user_manager->isGeneratedUsername($user->getAccountName(), $siwe_data['address'])) {
-          // Store the SIWE data in tempstore for later use
+          // Store the SIWE data in tempstore for later use.
           $tempstore->set('pending_siwe_data', $siwe_data);
-          
+
           // Clear the verification tempstore.
           $tempstore->delete('verification_' . $hash);
-          
+
           $this->messenger()->addStatus($this->t('Email verified successfully. Please create a username for your account.'));
-          
+
           // Redirect to username creation form.
           return $this->redirect('siwe_login.username_creation_form');
         }
@@ -189,9 +195,10 @@ class EmailVerificationController extends ControllerBase {
     }
 
     // Time out, in seconds, until verification URL expires.
-    $timeout = 86400; // 24 hours
+    // 24 hours.
+    $timeout = 86400;
     $current = \Drupal::time()->getRequestTime();
-    
+
     // No time out for first time verification.
     if ($user->getLastLoginTime() && $current - $timestamp > $timeout) {
       $this->messenger()->addError($this->t('You have tried to use a verification link that has expired. Please request a new verification email.'));
@@ -224,13 +231,13 @@ class EmailVerificationController extends ControllerBase {
   protected function validatePathParameters(UserInterface $user, int $timestamp, string $hash, int $timeout = 0): bool {
     $current = \Drupal::time()->getRequestTime();
     $timeout_valid = ((!empty($timeout) && $current - $timestamp < $timeout) || empty($timeout));
-    
-    // Create a hash based on user data and SIWE data
+
+    // Create a hash based on user data and SIWE data.
     $data = $timestamp . ':' . $user->id() . ':' . $user->getEmail();
     // We don't have the Ethereum address here, so we'll just verify the hash
-    // with the user's password as the key
+    // with the user's password as the key.
     $expected_hash = Crypt::hmacBase64($data, \Drupal::service('private_key')->get() . $user->getPassword());
-    
+
     return ($timestamp >= $user->getLastLoginTime()) && $timestamp <= $current && $timeout_valid && hash_equals($expected_hash, $hash);
   }
 

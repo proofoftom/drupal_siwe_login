@@ -11,8 +11,7 @@ use Drupal\user\UserInterface;
 /**
  * Manages Ethereum wallet-based user accounts.
  */
-class EthereumUserManager
-{
+class EthereumUserManager {
 
   protected $entityTypeManager;
   protected $logger;
@@ -23,7 +22,7 @@ class EthereumUserManager
     EntityTypeManagerInterface $entity_type_manager,
     LoggerChannelFactoryInterface $logger_factory,
     AccountProxyInterface $current_user,
-    LanguageManagerInterface $language_manager
+    LanguageManagerInterface $language_manager,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->logger = $logger_factory->get('siwe_login');
@@ -42,17 +41,17 @@ class EthereumUserManager
    * @return \Drupal\user\UserInterface
    *   The user entity.
    */
-  public function findOrCreateUser(string $address, array $additional_data = []): UserInterface
-  {
+  public function findOrCreateUser(string $address, array $additional_data = []): UserInterface {
     $address = $this->normalizeAddress($address);
 
-    // Try to find existing user
+    // Try to find existing user.
     $user = $this->findUserByAddress($address);
 
     if (!$user) {
       $user = $this->createUserFromAddress($address, $additional_data);
-    } else {
-      // Update last login and any additional data
+    }
+    else {
+      // Update last login and any additional data.
       $this->updateUserData($user, $additional_data);
     }
 
@@ -62,8 +61,7 @@ class EthereumUserManager
   /**
    * Finds a user by Ethereum address.
    */
-  public function findUserByAddress(string $address): ?UserInterface
-  {
+  public function findUserByAddress(string $address): ?UserInterface {
     $users = $this->entityTypeManager
       ->getStorage('user')
       ->loadByProperties(['field_ethereum_address' => $this->normalizeAddress($address)]);
@@ -74,11 +72,10 @@ class EthereumUserManager
   /**
    * Creates a new user from an Ethereum address.
    */
-  protected function createUserFromAddress(string $address, array $data): UserInterface
-  {
+  protected function createUserFromAddress(string $address, array $data): UserInterface {
     $normalized_address = $this->normalizeAddress($address);
 
-    // Use ENS name from the verified SIWE message
+    // Use ENS name from the verified SIWE message.
     $ens_name = $data['ensName'] ?? NULL;
     $username = $ens_name ?: $this->generateUsername($normalized_address);
 
@@ -114,11 +111,10 @@ class EthereumUserManager
    * @return \Drupal\user\UserInterface
    *   The temporary user entity.
    */
-  public function createTempUserWithEmail(string $address, array $data): UserInterface
-  {
+  public function createTempUserWithEmail(string $address, array $data): UserInterface {
     $normalized_address = $this->normalizeAddress($address);
 
-    // Use ENS name from the verified SIWE message
+    // Use ENS name from the verified SIWE message.
     $ens_name = $data['ensName'] ?? NULL;
     $email = $data['email'] ?? $this->generateEmail($normalized_address);
     $username = $ens_name ?: $this->generateUsername($normalized_address);
@@ -147,11 +143,10 @@ class EthereumUserManager
    * @return \Drupal\user\UserInterface
    *   The user entity.
    */
-  public function createUserWithUsername(string $address, array $data): UserInterface
-  {
+  public function createUserWithUsername(string $address, array $data): UserInterface {
     $normalized_address = $this->normalizeAddress($address);
 
-    // Use provided username or ENS name from the verified SIWE message
+    // Use provided username or ENS name from the verified SIWE message.
     $username = $data['username'] ?? $data['ensName'] ?? $this->generateUsername($normalized_address);
     $email = $data['email'] ?? $this->generateEmail($normalized_address);
 
@@ -187,8 +182,7 @@ class EthereumUserManager
    * @return \Drupal\user\UserInterface
    *   The updated user entity.
    */
-  public function updateUserUsername(UserInterface $user, string $username): UserInterface
-  {
+  public function updateUserUsername(UserInterface $user, string $username): UserInterface {
     $user->set('name', $username);
     $user->save();
 
@@ -211,23 +205,23 @@ class EthereumUserManager
    * @return \Drupal\user\UserInterface
    *   The user entity.
    */
-  public function findOrCreateUserWithEmail(string $address, array $data): UserInterface
-  {
+  public function findOrCreateUserWithEmail(string $address, array $data): UserInterface {
     $address = $this->normalizeAddress($address);
 
-    // Try to find existing user
+    // Try to find existing user.
     $user = $this->findUserByAddress($address);
 
     if (!$user) {
       $user = $this->createUserFromAddressWithEmail($address, $data);
-    } else {
-      // Update the user's email if provided
+    }
+    else {
+      // Update the user's email if provided.
       if (isset($data['email']) && !empty($data['email'])) {
         $user->set('mail', $data['email']);
         $user->save();
       }
 
-      // Update last login and any additional data
+      // Update last login and any additional data.
       $this->updateUserData($user, $data);
     }
 
@@ -237,11 +231,10 @@ class EthereumUserManager
   /**
    * Creates a new user from an Ethereum address with a specific email.
    */
-  protected function createUserFromAddressWithEmail(string $address, array $data): UserInterface
-  {
+  protected function createUserFromAddressWithEmail(string $address, array $data): UserInterface {
     $normalized_address = $this->normalizeAddress($address);
 
-    // Use ENS name from the verified SIWE message
+    // Use ENS name from the verified SIWE message.
     $ens_name = $data['ensName'] ?? NULL;
     $email = $data['email'] ?? $this->generateEmail($normalized_address);
     $username = $ens_name ?: $this->generateUsername($normalized_address);
@@ -271,13 +264,12 @@ class EthereumUserManager
   /**
    * Updates user data from SIWE message.
    */
-  protected function updateUserData(UserInterface $user, array $data): void
-  {
-    // Update ENS name from SIWE data
+  protected function updateUserData(UserInterface $user, array $data): void {
+    // Update ENS name from SIWE data.
     if (isset($data['ensName']) && $data['ensName'] !== $user->get('name')->value) {
       $user->set('name', $data['ensName']);
 
-      // Save the user
+      // Save the user.
       $user->save();
 
       $this->logger->info('Updated ENS for Ethereum address @address to @ens_name', [
@@ -290,17 +282,15 @@ class EthereumUserManager
   /**
    * Normalizes an Ethereum address.
    */
-  protected function normalizeAddress(string $address): string
-  {
-    // Convert to checksummed address format
+  protected function normalizeAddress(string $address): string {
+    // Convert to checksummed address format.
     return strtolower(trim($address));
   }
 
   /**
    * Generates a unique username from address.
    */
-  public function generateUsername(string $address): string
-  {
+  public function generateUsername(string $address): string {
     $base_username = 'eth_' . substr($address, 2, 8);
     $username = $base_username;
     $i = 1;
@@ -315,16 +305,14 @@ class EthereumUserManager
   /**
    * Generates email from address.
    */
-  protected function generateEmail(string $address): string
-  {
+  protected function generateEmail(string $address): string {
     return substr($address, 2, 12) . '@ethereum.local';
   }
 
   /**
    * Checks if username exists.
    */
-  protected function usernameExists(string $username): bool
-  {
+  protected function usernameExists(string $username): bool {
     $users = $this->entityTypeManager
       ->getStorage('user')
       ->loadByProperties(['name' => $username]);
@@ -343,21 +331,21 @@ class EthereumUserManager
    * @return bool
    *   TRUE if the username looks like a generated one, FALSE otherwise.
    */
-  public function isGeneratedUsername(string $username, string $address): bool
-  {
+  public function isGeneratedUsername(string $username, string $address): bool {
     $normalized_address = $this->normalizeAddress($address);
     $base_username = 'eth_' . substr($normalized_address, 2, 8);
-    
-    // Check if it matches the base pattern
+
+    // Check if it matches the base pattern.
     if ($username === $base_username) {
       return TRUE;
     }
-    
-    // Check if it matches the pattern with a number suffix
+
+    // Check if it matches the pattern with a number suffix.
     if (preg_match('/^' . preg_quote($base_username) . '_\d+$/', $username)) {
       return TRUE;
     }
-    
+
     return FALSE;
   }
+
 }

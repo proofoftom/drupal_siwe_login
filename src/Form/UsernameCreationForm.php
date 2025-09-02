@@ -135,28 +135,29 @@ class UsernameCreationForm extends FormBase {
 
     // Find or create user account with the provided username.
     $user_manager = \Drupal::service('siwe_login.user_manager');
-    
-    // Try to find existing user first
+
+    // Try to find existing user first.
     $user = $user_manager->findUserByAddress($siwe_data['address']);
-    
+
     if ($user) {
-      // Update existing user's username
+      // Update existing user's username.
       $user = $user_manager->updateUserUsername($user, $username);
-    } else {
-      // Create new user account with the provided username
+    }
+    else {
+      // Create new user account with the provided username.
       $user = $user_manager->createUserWithUsername($siwe_data['address'], $siwe_data);
     }
 
     if ($user) {
       // Clear the tempstore.
       $this->tempStore->delete('pending_siwe_data');
-      
+
       // Authenticate the user.
       user_login_finalize($user);
 
       $this->messenger()->addStatus($this->t('Your account has been created successfully.'));
-      
-      // Redirect to homepage
+
+      // Redirect to homepage.
       $form_state->setRedirect('<front>');
     }
     else {

@@ -10,8 +10,7 @@ use Drupal\Core\Routing\RouteMatchInterface;
 /**
  * Implements hook_help().
  */
-function siwe_login_help($route_name, RouteMatchInterface $route_match)
-{
+function siwe_login_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
     case 'help.page.siwe_login':
       return '<p>' . t('This module provides Ethereum wallet-based authentication for Drupal using the Sign-In with Ethereum (SIWE) standard.') . '</p>';
@@ -21,8 +20,7 @@ function siwe_login_help($route_name, RouteMatchInterface $route_match)
 /**
  * Implements hook_permission().
  */
-function siwe_login_permission()
-{
+function siwe_login_permission() {
   return [
     'use siwe authentication' => [
       'title' => t('Use SIWE authentication'),
@@ -46,16 +44,16 @@ function siwe_login_mail($key, &$message, $params) {
       // Ensure we have a config value
       $subject = $config->get('email_verification.subject');
       $body = $config->get('email_verification.body');
-      
+
       // Set defaults if config is missing
       $message['subject'] = $subject ?: t('Verify your email address');
       $message['body'][] = $body ?: t("Please verify your email address by clicking the link below:\n\n[siwe:email-verification-url]");
-      
+
       // Add custom token replacement
       if (isset($params['verification_url'])) {
         $message['body'][0] = str_replace('[siwe:email-verification-url]', $params['verification_url'], $message['body'][0]);
       }
-      
+
       break;
   }
 }

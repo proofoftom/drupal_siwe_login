@@ -133,16 +133,18 @@ class EmailVerificationForm extends FormBase {
       try {
         $validator = \Drupal::service('siwe_login.message_validator');
         $parsed = $validator->parseSiweMessage($siwe_data['message']);
-        
+
         if (isset($parsed['resources']) && !empty($parsed['resources'])) {
           foreach ($parsed['resources'] as $resource) {
             if (strpos($resource, 'ens:') === 0) {
-              $ensName = substr($resource, 4); // Remove 'ens:' prefix
+              // Remove 'ens:' prefix.
+              $ensName = substr($resource, 4);
               break;
             }
           }
         }
-      } catch (\Exception $e) {
+      }
+      catch (\Exception $e) {
         \Drupal::logger('siwe_login')->warning('Failed to extract ENS name from SIWE message: @message', [
           '@message' => $e->getMessage(),
         ]);
@@ -158,18 +160,19 @@ class EmailVerificationForm extends FormBase {
     $user = $user_manager->createTempUserWithEmail($siwe_data['address'], $siwe_data);
 
     if ($user) {
-      // Send verification email
+      // Send verification email.
       if ($this->sendVerificationEmail($user, $siwe_data)) {
         // Clear the tempstore.
         $this->tempStore->delete('pending_siwe_data');
-        
+
         $this->messenger()->addStatus($this->t('A verification email has been sent to @email. Please check your inbox and click the verification link to complete your registration.', [
           '@email' => $email,
         ]));
-        
-        // Redirect to homepage with message
+
+        // Redirect to homepage with message.
         $form_state->setRedirect('<front>');
-      } else {
+      }
+      else {
         $this->messenger()->addError($this->t('Unable to send verification email. Please try again later.'));
         $form_state->setRedirect('siwe_login.email_verification_form');
       }
@@ -193,16 +196,16 @@ class EmailVerificationForm extends FormBase {
    */
   protected function sendVerificationEmail(UserInterface $user, array $siwe_data) {
     try {
-      // Generate verification URL
+      // Generate verification URL.
       $verification_url = $this->generateVerificationUrl($user, $siwe_data);
-      
-      // Prepare email parameters
+
+      // Prepare email parameters.
       $params = [
         'account' => $user,
         'siwe_data' => $siwe_data,
         'verification_url' => $verification_url,
       ];
-      
+
       // Get the custom site notification email to use as the from email address
       // if it has been set.
       $site_mail = \Drupal::config('system.site')->get('mail_notification');
@@ -214,8 +217,8 @@ class EmailVerificationForm extends FormBase {
       if (empty($site_mail)) {
         $site_mail = ini_get('sendmail_from');
       }
-      
-      // Send the email
+
+      // Send the email.
       $mail = \Drupal::service('plugin.manager.mail')->mail(
         'siwe_login',
         'email_verification',
@@ -224,9 +227,10 @@ class EmailVerificationForm extends FormBase {
         $params,
         $site_mail
       );
-      
+
       return !empty($mail['result']);
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
       \Drupal::logger('siwe_login')->error('Failed to send verification email: @message', [
         '@message' => $e->getMessage(),
       ]);
@@ -247,26 +251,26 @@ class EmailVerificationForm extends FormBase {
    */
   protected function generateVerificationUrl(UserInterface $user, array $siwe_data) {
     $timestamp = \Drupal::time()->getRequestTime();
-    
-    // Create a hash based on user data and SIWE data
+
+    // Create a hash based on user data and SIWE data.
     $data = $timestamp . ':' . $user->id() . ':' . $user->getEmail();
     if (isset($siwe_data['address'])) {
       $data .= ':' . $siwe_data['address'];
     }
     $hash = Crypt::hmacBase64($data, \Drupal::service('private_key')->get() . $user->getPassword());
-    
-    // Store SIWE data in tempstore with a key based on the hash
+
+    // Store SIWE data in tempstore with a key based on the hash.
     $tempstore = \Drupal::service('tempstore.private')->get('siwe_login');
     $tempstore->set('verification_' . $hash, $siwe_data);
-    
-    // Generate URL - make sure uid is an integer
+
+    // Generate URL - make sure uid is an integer.
     $uid = $user->id() ?: 0;
-    
-    // Ensure timestamp and hash are not null
+
+    // Ensure timestamp and hash are not null.
     $timestamp = $timestamp ?: time();
     $hash = $hash ?: uniqid();
-    
-    // Generate URL
+
+    // Generate URL.
     return Url::fromRoute('siwe_login.email_verification_confirm', [
       'uid' => (int) $uid,
       'timestamp' => (int) $timestamp,

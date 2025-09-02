@@ -8,22 +8,19 @@ use Drupal\Core\Form\FormStateInterface;
 /**
  * Form for SIWE login settings.
  */
-class SiweSettingsForm extends ConfigFormBase
-{
+class SiweSettingsForm extends ConfigFormBase {
 
   /**
    * {@inheritdoc}
    */
-  public function getFormId()
-  {
+  public function getFormId() {
     return 'siwe_login_settings';
   }
 
   /**
    * {@inheritdoc}
    */
-  protected function getEditableConfigNames()
-  {
+  protected function getEditableConfigNames() {
     return [
       'siwe_login.settings',
     ];
@@ -32,14 +29,12 @@ class SiweSettingsForm extends ConfigFormBase
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state)
-  {
+  public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('siwe_login.settings');
 
     // Note: The expected_domain setting is managed automatically by SIWE Server
     // when present, or defaults to the current host when SIWE Server is not used.
     // It is not exposed in the UI to simplify configuration.
-
     $form['nonce_ttl'] = [
       '#type' => 'number',
       '#title' => $this->t('Nonce TTL'),
@@ -84,9 +79,8 @@ class SiweSettingsForm extends ConfigFormBase
   /**
    * {@inheritdoc}
    */
-  public function submitForm(array &$form, FormStateInterface $form_state)
-  {
-    // Save all settings except expected_domain, which is managed automatically
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    // Save all settings except expected_domain, which is managed automatically.
     $this->config('siwe_login.settings')
       ->set('nonce_ttl', $form_state->getValue('nonce_ttl'))
       ->set('message_ttl', $form_state->getValue('message_ttl'))
@@ -97,4 +91,5 @@ class SiweSettingsForm extends ConfigFormBase
 
     parent::submitForm($form, $form_state);
   }
+
 }
