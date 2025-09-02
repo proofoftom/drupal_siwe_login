@@ -2,6 +2,8 @@
 
 namespace Drupal\siwe_login\Service;
 
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Core\Cache\CacheBackendInterface;
 use Elliptic\EC;
 use kornrunner\Keccak;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -14,18 +16,73 @@ use Drupal\siwe_login\Exception\InvalidSiweMessageException;
  */
 class SiweMessageValidator {
 
+  /**
+   * The logger channel for SIWE login.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
   protected $logger;
+
+  /**
+   * The time service.
+   *
+   * @var \Drupal\Component\Datetime\TimeInterface
+   */
   protected $time;
+
+  /**
+   * The SIWE login configuration.
+   *
+   * @var \Drupal\Core\Config\ImmutableConfig
+   */
   protected $config;
 
+  /**
+   * The cache backend for nonce storage.
+   *
+   * @var \Drupal\Core\Cache\CacheBackendInterface
+   */
+  protected $cache;
+
+  /**
+   * Constructs a SiweMessageValidator object.
+   *
+   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
+   *   The logger channel factory.
+   * @param \Drupal\Component\Datetime\TimeInterface $time
+   *   The time service.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The configuration factory.
+   * @param \Drupal\Core\Cache\CacheBackendInterface $cache
+   *   The default cache backend.
+   */
   public function __construct(
     LoggerChannelFactoryInterface $logger_factory,
     TimeInterface $time,
     ConfigFactoryInterface $config_factory,
+    CacheBackendInterface $cache,
   ) {
     $this->logger = $logger_factory->get('siwe_login');
     $this->time = $time;
     $this->config = $config_factory->get('siwe_login.settings');
+    $this->cache = $cache;
+  }
+
+  /**
+   * Creates a new instance of SiweMessageValidator.
+   *
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
+   *   The service container.
+   *
+   * @return static
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+          $container->get('logger.factory'),
+          $container->get('datetime.time'),
+          $container->get('config.factory'),
+          $container->get('cache.default')
+      );
   }
 
   /**
@@ -58,10 +115,10 @@ class SiweMessageValidator {
 
       // Verify signature using Ethereum standards.
       $this->verifySignature(
-        $message_data['message'],
-        $message_data['signature'],
-        $message_data['address']
-      );
+            $message_data['message'],
+            $message_data['signature'],
+            $message_data['address']
+        );
 
       // Validate temporal constraints.
       $this->validateTimestamps($message_data);
@@ -74,14 +131,17 @@ class SiweMessageValidator {
 
       // @todo Validate that ENS name resolves to signing address
       // if (isset($message_data['resources'])) {
-      //   $this->validateENS($message_data['address'], $message_data['resources'][0]);
+      // $this->validateENS($message_data['address'],
+      // $message_data['resources'][0]);
       // }.
       return TRUE;
     }
     catch (\Exception $e) {
-      $this->logger->error('SIWE message validation failed: @message', [
-        '@message' => $e->getMessage(),
-      ]);
+      $this->logger->error(
+            'SIWE message validation failed: @message', [
+              '@message' => $e->getMessage(),
+            ]
+        );
       throw new InvalidSiweMessageException($e->getMessage());
     }
   }
@@ -155,7 +215,8 @@ class SiweMessageValidator {
   protected function validateTimestamps(array $message_data): void {
     $current_time = $this->time->getCurrentTime();
 
-    // Check if message is not from the future (clock skew tolerance of 30 seconds)
+    // Check if message is not from the future (clock skew tolerance of 30
+    // seconds)
     if (isset($message_data['issuedAt'])) {
       $issued_at = strtotime($message_data['issuedAt']);
       if ($issued_at > $current_time + 30) {
@@ -192,7 +253,7 @@ class SiweMessageValidator {
   protected function validateNonce(string $nonce): void {
     // Check nonce against stored values in cache.
     $nonce_key = 'siwe_nonce_lookup:' . $nonce;
-    $cached_client = \Drupal::cache()->get($nonce_key);
+    $cached_client = $this->cache->get($nonce_key);
 
     if (!$cached_client) {
       throw new InvalidSiweMessageException('Invalid or expired nonce');
@@ -203,7 +264,8 @@ class SiweMessageValidator {
    * Validates domain matches expected domain(s).
    */
   protected function validateDomain(array $message_data): void {
-    // This config field may be updated by the SIWE Server module to include multiple domains.
+    // This config field may be updated by the SIWE Server module to include
+    // multiple domains.
     $expected_domain = $this->config->get('expected_domain');
 
     // Handle comma-separated domains.
@@ -213,10 +275,12 @@ class SiweMessageValidator {
     $expected_domains = array_filter($expected_domains);
 
     // Log the expected and actual domain for debugging.
-    \Drupal::logger('siwe_login')->debug('Validating domain. Expected: @expected, Actual: @actual', [
-      '@expected' => implode(', ', $expected_domains),
-      '@actual' => $message_data['domain'],
-    ]);
+    $this->logger->debug(
+          'Validating domain. Expected: @expected, Actual: @actual', [
+            '@expected' => implode(', ', $expected_domains),
+            '@actual' => $message_data['domain'],
+          ]
+      );
 
     // Check if the domain matches exactly.
     if (in_array($message_data['domain'], $expected_domains)) {
@@ -248,12 +312,15 @@ class SiweMessageValidator {
       array_shift($lines);
     }
 
-    // Parse statement if present (optional, can be multiline until we hit a field)
+    // Parse statement if present (optional, can be multiline until we hit a
+    // field)
     $statement_lines = [];
     while (!empty($lines)) {
       $line = $lines[0];
       // Check if this line is a field (contains ': ')
-      if (strpos($line, ': ') !== FALSE && preg_match("/^(URI|Version|Chain ID|Nonce|Issued At|Expiration Time|Not Before|Request ID|Resources):/", $line)) {
+      if (strpos($line, ': ') !== FALSE
+            && preg_match("/^(URI|Version|Chain ID|Nonce|Issued At|Expiration Time|Not Before|Request ID|Resources):/", $line)
+        ) {
         break;
       }
       $statement_lines[] = array_shift($lines);
@@ -271,7 +338,12 @@ class SiweMessageValidator {
       }
 
       // Check if this line is a field header (may or may not have a value)
-      if (preg_match("/^(URI|Version|Chain ID|Nonce|Issued At|Expiration Time|Not Before|Request ID|Resources):(.*)$/", $line, $matches)) {
+      if (preg_match(
+            "/^(URI|Version|Chain ID|Nonce|Issued At|Expiration Time|Not Before|Request ID|Resources):(.*)$/",
+            $line,
+            $matches
+        )
+        ) {
         $key = trim($matches[1]);
         $value = trim($matches[2]);
 
@@ -334,7 +406,8 @@ class SiweMessageValidator {
     $hash = str_split($hash);
 
     for ($i = 0; $i < count($address); $i++) {
-      // Convert to uppercase if the corresponding hex character in the hash is >= 8.
+      // Convert to uppercase if the corresponding hex character in the hash
+      // is >= 8.
       if (hexdec($hash[$i]) >= 8) {
         $address[$i] = strtoupper($address[$i]);
       }

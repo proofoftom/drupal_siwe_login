@@ -2,6 +2,7 @@
 
 namespace Drupal\siwe_login\Plugin\Mail;
 
+use Drupal\Component\Plugin\PluginManagerInterface;
 use Drupal\Core\Mail\MailInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 
@@ -16,7 +17,24 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
  */
 class SiweMail implements MailInterface {
 
+  /**
+   * The mail plugin manager.
+   *
+   * @var \Drupal\Component\Plugin\PluginManagerInterface
+   */
+  protected $mailManager;
+
   use StringTranslationTrait;
+
+  /**
+   * Constructs a new SiweMail instance.
+   *
+   * @param \Drupal\Component\Plugin\PluginManagerInterface $mail_manager
+   *   The mail plugin manager.
+   */
+  public function __construct(PluginManagerInterface $mail_manager) {
+    $this->mailManager = $mail_manager;
+  }
 
   /**
    * {@inheritdoc}
@@ -36,7 +54,7 @@ class SiweMail implements MailInterface {
    */
   public function mail(array $message) {
     // Get the default mailer.
-    $default_mailer = \Drupal::service('plugin.manager.mail')->createInstance('php_mail');
+    $default_mailer = $this->mailManager->createInstance('php_mail');
     // Send the email using the default mailer.
     return $default_mailer->mail($message);
   }

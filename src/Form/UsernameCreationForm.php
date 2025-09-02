@@ -6,7 +6,9 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\TempStore\PrivateTempStoreFactory;
+use Drupal\siwe_login\Service\EthereumUserManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 
 /**
  * Form for username creation during SIWE authentication.
@@ -28,16 +30,41 @@ class UsernameCreationForm extends FormBase {
   protected $tempStore;
 
   /**
+   * The Ethereum user manager.
+   *
+   * @var \Drupal\siwe_login\Service\EthereumUserManager
+   */
+  protected $userManager;
+
+  /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
    * Constructs a new UsernameCreationForm.
    *
    * @param \Drupal\Core\Session\AccountProxyInterface $current_user
    *   The current user.
    * @param \Drupal\Core\TempStore\PrivateTempStoreFactory $temp_store_factory
    *   The tempstore factory.
+   * @param \Drupal\siwe_login\Service\EthereumUserManager $user_manager
+   *   The Ethereum user manager.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
    */
-  public function __construct(AccountProxyInterface $current_user, PrivateTempStoreFactory $temp_store_factory) {
+  public function __construct(
+    AccountProxyInterface $current_user,
+    PrivateTempStoreFactory $temp_store_factory,
+    EthereumUserManager $user_manager,
+    EntityTypeManagerInterface $entity_type_manager,
+  ) {
     $this->currentUser = $current_user;
     $this->tempStore = $temp_store_factory->get('siwe_login');
+    $this->userManager = $user_manager;
+    $this->entityTypeManager = $entity_type_manager;
   }
 
   /**
@@ -46,7 +73,9 @@ class UsernameCreationForm extends FormBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('current_user'),
-      $container->get('tempstore.private')
+      $container->get('tempstore.private'),
+      $container->get('siwe_login.user_manager'),
+      $container->get('entity_type.manager'),
     );
   }
 
@@ -98,7 +127,7 @@ class UsernameCreationForm extends FormBase {
     $username = $form_state->getValue('username');
 
     // Check if username is already in use.
-    $user_storage = \Drupal::entityTypeManager()->getStorage('user');
+    $user_storage = $this->entityTypeManager->getStorage('user');
     $existing_users = $user_storage->loadByProperties(['name' => $username]);
 
     // Remove the current user from the list if they have the same username.
@@ -134,7 +163,7 @@ class UsernameCreationForm extends FormBase {
     $siwe_data['username'] = $username;
 
     // Find or create user account with the provided username.
-    $user_manager = \Drupal::service('siwe_login.user_manager');
+    $user_manager = $this->userManager;
 
     // Try to find existing user first.
     $user = $user_manager->findUserByAddress($siwe_data['address']);

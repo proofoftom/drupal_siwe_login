@@ -16,6 +16,7 @@ services:
       - "@logger.factory"
       - "@datetime.time"
       - "@config.factory"
+      - "@cache.default"
 
   siwe_login.user_manager:
     class: Drupal\siwe_login\Service\EthereumUserManager
@@ -27,4 +28,6 @@ services:
 
   siwe_login.mail:
     class: Drupal\siwe_login\Plugin\Mail\SiweMail
+    arguments:
+      - "@plugin.manager.mail"
     tag: mail

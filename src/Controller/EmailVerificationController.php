@@ -2,9 +2,14 @@
 
 namespace Drupal\siwe_login\Controller;
 
+use Drupal\Component\Datetime\Time;
 use Drupal\Component\Utility\Crypt;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\PrivateKey;
 use Drupal\Core\TempStore\PrivateTempStoreFactory;
+use Drupal\siwe_login\Service\EthereumUserManager;
+use Drupal\siwe_login\Service\SiweMessageValidator;
 use Drupal\user\UserInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -23,13 +28,70 @@ class EmailVerificationController extends ControllerBase {
   protected $tempStore;
 
   /**
+   * The SIWE message validator.
+   *
+   * @var \Drupal\siwe_login\Service\SiweMessageValidator
+   */
+  protected $messageValidator;
+
+  /**
+   * The Ethereum user manager.
+   *
+   * @var \Drupal\siwe_login\Service\EthereumUserManager
+   */
+  protected $userManager;
+
+  /**
+   * The config factory.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
+   * The datetime.time service.
+   *
+   * @var \Drupal\Component\Datetime\Time
+   */
+  protected $time;
+
+  /**
+   * The private key service.
+   *
+   * @var \Drupal\Core\PrivateKey
+   */
+  protected $privateKey;
+
+  /**
    * Constructs a new EmailVerificationController.
    *
    * @param \Drupal\Core\TempStore\PrivateTempStoreFactory $temp_store_factory
    *   The tempstore factory.
+   * @param \Drupal\siwe_login\Service\SiweMessageValidator $message_validator
+   *   The SIWE message validator.
+   * @param \Drupal\siwe_login\Service\EthereumUserManager $user_manager
+   *   The Ethereum user manager.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
+   * @param \Drupal\Component\Datetime\Time $time
+   *   The datetime.time service.
+   * @param \Drupal\Core\PrivateKey $private_key
+   *   The private key service.
    */
-  public function __construct(PrivateTempStoreFactory $temp_store_factory) {
+  public function __construct(
+    PrivateTempStoreFactory $temp_store_factory,
+    SiweMessageValidator $message_validator,
+    EthereumUserManager $user_manager,
+    ConfigFactoryInterface $config_factory,
+    Time $time,
+    PrivateKey $private_key,
+  ) {
     $this->tempStore = $temp_store_factory;
+    $this->messageValidator = $message_validator;
+    $this->userManager = $user_manager;
+    $this->configFactory = $config_factory;
+    $this->time = $time;
+    $this->privateKey = $private_key;
   }
 
   /**
@@ -37,7 +99,12 @@ class EmailVerificationController extends ControllerBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('tempstore.private')
+      $container->get('tempstore.private'),
+      $container->get('siwe_login.message_validator'),
+      $container->get('siwe_login.user_manager'),
+      $container->get('config.factory'),
+      $container->get('datetime.time'),
+      $container->get('private_key'),
     );
   }
 
@@ -82,7 +149,7 @@ class EmailVerificationController extends ControllerBase {
     $ensName = NULL;
     if (isset($siwe_data['message'])) {
       try {
-        $validator = \Drupal::service('siwe_login.message_validator');
+        $validator = $this->messageValidator;
         $parsed = $validator->parseSiweMessage($siwe_data['message']);
 
         if (isset($parsed['resources']) && !empty($parsed['resources'])) {
@@ -106,18 +173,18 @@ class EmailVerificationController extends ControllerBase {
     $siwe_data['ensName'] = $ensName;
 
     // Find or create user with the provided email.
-    $user_manager = \Drupal::service('siwe_login.user_manager');
+    $user_manager = $this->userManager;
     $user = $user_manager->findOrCreateUserWithEmail($siwe_data['address'], $siwe_data);
 
     if ($user) {
       // Check if ENS/username is required and user doesn't have an ENS name.
-      $config = \Drupal::config('siwe_login.settings');
+      $config = $this->configFactory->get('siwe_login.settings');
       if ($config->get('require_ens_or_username')) {
         // Extract ENS name from the raw message.
         $ensName = NULL;
         if (isset($siwe_data['message'])) {
           try {
-            $validator = \Drupal::service('siwe_login.message_validator');
+            $validator = $this->messageValidator;
             $parsed = $validator->parseSiweMessage($siwe_data['message']);
 
             if (isset($parsed['resources']) && !empty($parsed['resources'])) {
@@ -197,7 +264,7 @@ class EmailVerificationController extends ControllerBase {
     // Time out, in seconds, until verification URL expires.
     // 24 hours.
     $timeout = 86400;
-    $current = \Drupal::time()->getRequestTime();
+    $current = $this->time->getRequestTime();
 
     // No time out for first time verification.
     if ($user->getLastLoginTime() && $current - $timestamp > $timeout) {
@@ -229,14 +296,14 @@ class EmailVerificationController extends ControllerBase {
    *   Whether the provided data are valid.
    */
   protected function validatePathParameters(UserInterface $user, int $timestamp, string $hash, int $timeout = 0): bool {
-    $current = \Drupal::time()->getRequestTime();
+    $current = $this->time->getRequestTime();
     $timeout_valid = ((!empty($timeout) && $current - $timestamp < $timeout) || empty($timeout));
 
     // Create a hash based on user data and SIWE data.
     $data = $timestamp . ':' . $user->id() . ':' . $user->getEmail();
     // We don't have the Ethereum address here, so we'll just verify the hash
     // with the user's password as the key.
-    $expected_hash = Crypt::hmacBase64($data, \Drupal::service('private_key')->get() . $user->getPassword());
+    $expected_hash = Crypt::hmacBase64($data, $this->privateKey->get() . $user->getPassword());
 
     return ($timestamp >= $user->getLastLoginTime()) && $timestamp <= $current && $timeout_valid && hash_equals($expected_hash, $hash);
   }

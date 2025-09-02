@@ -3,6 +3,9 @@
 namespace Drupal\siwe_login\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\TempStore\PrivateTempStoreFactory;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -13,10 +16,44 @@ use Drupal\siwe_login\Service\SiweAuthService;
  */
 class SiweAuthController extends ControllerBase {
 
+  /**
+   * The SIWE authentication service.
+   *
+   * @var \Drupal\siwe_login\Service\SiweAuthService
+   */
   protected $siweAuthService;
 
-  public function __construct(SiweAuthService $siwe_auth_service) {
+  /**
+   * The configuration factory.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
+   * The cache backend.
+   *
+   * @var \Drupal\Core\Cache\CacheBackendInterface
+   */
+  protected $cache;
+
+  /**
+   * The private tempstore.
+   *
+   * @var \Drupal\Core\TempStore\PrivateTempStoreFactory
+   */
+  protected $tempstorePrivate;
+
+  public function __construct(
+    SiweAuthService $siwe_auth_service,
+    ConfigFactoryInterface $config_factory,
+    CacheBackendInterface $cache,
+    PrivateTempStoreFactory $tempstore_private,
+  ) {
     $this->siweAuthService = $siwe_auth_service;
+    $this->configFactory = $config_factory;
+    $this->cache = $cache;
+    $this->tempstorePrivate = $tempstore_private;
   }
 
   /**
@@ -24,7 +61,10 @@ class SiweAuthController extends ControllerBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('siwe_login.auth_service')
+      $container->get('siwe_login.auth_service'),
+      $container->get('config.factory'),
+      $container->get('cache.default'),
+      $container->get('tempstore.private')
     );
   }
 
@@ -36,8 +76,8 @@ class SiweAuthController extends ControllerBase {
       $nonce = $this->siweAuthService->generateNonce();
 
       // Store nonce in cache with a 5-minute TTL (300 seconds)
-      $ttl = \Drupal::config('siwe_login.settings')->get('nonce_ttl');
-      \Drupal::cache()->set('siwe_nonce_lookup:' . $nonce, TRUE, time() + $ttl);
+      $ttl = $this->configFactory->get('siwe_login.settings')->get('nonce_ttl');
+      $this->cache->set('siwe_nonce_lookup:' . $nonce, TRUE, time() + $ttl);
 
       return new JsonResponse(
         [
@@ -88,7 +128,7 @@ class SiweAuthController extends ControllerBase {
         // If user doesn't exist, redirect to email verification form.
         if (!$user) {
           // Store the SIWE data in tempstore for later use.
-          $tempstore = \Drupal::service('tempstore.private')->get('siwe_login');
+          $tempstore = $this->tempstorePrivate->get('siwe_login');
           $tempstore->set('pending_siwe_data', $data);
 
           return new JsonResponse(
@@ -99,10 +139,12 @@ class SiweAuthController extends ControllerBase {
           );
         }
 
-        // If user exists but doesn't have an email or has a temporary email, redirect to email verification form.
-        if ($user && (empty($user->getEmail()) || strpos($user->getEmail(), '@ethereum.local') !== FALSE)) {
+        // If user exists but doesn't have an email or has a temporary email,
+        // redirect to email verification form.
+        if ($user && (empty($user->getEmail()) ||
+          strpos($user->getEmail(), '@ethereum.local') !== FALSE)) {
           // Store the SIWE data in tempstore for later use.
-          $tempstore = \Drupal::service('tempstore.private')->get('siwe_login');
+          $tempstore = $this->tempstorePrivate->get('siwe_login');
           $tempstore->set('pending_siwe_data', $data);
 
           return new JsonResponse(
@@ -149,10 +191,15 @@ class SiweAuthController extends ControllerBase {
           $user_manager = $this->siweAuthService->getUserManager();
           $user = $user_manager->findUserByAddress($data['address']);
 
-          // If user doesn't exist or has a generated username, redirect to username creation form.
-          if (!$user || $user_manager->isGeneratedUsername($user->getAccountName(), $data['address'])) {
+          // If user doesn't exist or has a generated username,
+          // redirect to username creation form.
+          if (!$user ||
+            $user_manager->isGeneratedUsername(
+              $user->getAccountName(),
+              $data['address']
+            )) {
             // Store the SIWE data in tempstore for later use.
-            $tempstore = \Drupal::service('tempstore.private')->get('siwe_login');
+            $tempstore = $this->tempstorePrivate->get('siwe_login');
             $tempstore->set('pending_siwe_data', $data);
 
             return new JsonResponse(

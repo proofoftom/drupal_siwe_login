@@ -14,12 +14,53 @@ use Drupal\user\UserInterface;
  */
 class SiweAuthService {
 
+  /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
   protected $entityTypeManager;
+
+  /**
+   * The session service.
+   *
+   * @var \Symfony\Component\HttpFoundation\Session\SessionInterface
+   */
   protected $session;
+
+  /**
+   * The user authentication service.
+   *
+   * @var \Drupal\user\UserAuthInterface
+   */
   protected $userAuth;
+
+  /**
+   * The logger channel for SIWE login.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
   protected $logger;
+
+  /**
+   * The SIWE message validator.
+   *
+   * @var \Drupal\siwe_login\Service\SiweMessageValidator
+   */
   protected $messageValidator;
+
+  /**
+   * The Ethereum user manager.
+   *
+   * @var \Drupal\siwe_login\Service\EthereumUserManager
+   */
   protected $userManager;
+
+  /**
+   * The SIWE login configuration.
+   *
+   * @var \Drupal\Core\Config\ImmutableConfig
+   */
   protected $config;
 
   public function __construct(
