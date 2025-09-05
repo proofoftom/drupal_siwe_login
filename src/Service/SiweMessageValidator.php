@@ -78,11 +78,11 @@ class SiweMessageValidator {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-          $container->get('logger.factory'),
-          $container->get('datetime.time'),
-          $container->get('config.factory'),
-          $container->get('cache.default')
-      );
+      $container->get('logger.factory'),
+      $container->get('datetime.time'),
+      $container->get('config.factory'),
+      $container->get('cache.default')
+    );
   }
 
   /**
@@ -115,10 +115,10 @@ class SiweMessageValidator {
 
       // Verify signature using Ethereum standards.
       $this->verifySignature(
-            $message_data['message'],
-            $message_data['signature'],
-            $message_data['address']
-        );
+        $message_data['message'],
+        $message_data['signature'],
+        $message_data['address']
+      );
 
       // Validate temporal constraints.
       $this->validateTimestamps($message_data);
@@ -129,19 +129,27 @@ class SiweMessageValidator {
       // Validate domain.
       $this->validateDomain($message_data);
 
-      // @todo Validate that ENS name resolves to signing address
-      // if (isset($message_data['resources'])) {
-      // $this->validateENS($message_data['address'],
-      // $message_data['resources'][0]);
-      // }.
+      // Validate ENS name if present in resources and ENS validation is enabled.
+      if ($this->config->get('enable_ens_validation') && isset($message_data['resources']) && !empty($message_data['resources'][0])) {
+        // Extract ENS name from resources (format: ens:{ens-name})
+        $ens_resource = $message_data['resources'][0];
+        if (strpos($ens_resource, 'ens:') === 0) {
+          $ens_name = substr($ens_resource, strlen('ens:'));
+          $this->validateENS($message_data['address'], $ens_name);
+        }
+        else {
+          throw new InvalidSiweMessageException('Invalid ENS resource format');
+        }
+      }
+
       return TRUE;
     }
     catch (\Exception $e) {
       $this->logger->error(
-            'SIWE message validation failed: @message', [
-              '@message' => $e->getMessage(),
-            ]
-        );
+        'SIWE message validation failed: @message', [
+          '@message' => $e->getMessage(),
+        ]
+      );
       throw new InvalidSiweMessageException($e->getMessage());
     }
   }
@@ -276,11 +284,11 @@ class SiweMessageValidator {
 
     // Log the expected and actual domain for debugging.
     $this->logger->debug(
-          'Validating domain. Expected: @expected, Actual: @actual', [
-            '@expected' => implode(', ', $expected_domains),
-            '@actual' => $message_data['domain'],
-          ]
-      );
+      'Validating domain. Expected: @expected, Actual: @actual', [
+        '@expected' => implode(', ', $expected_domains),
+        '@actual' => $message_data['domain'],
+      ]
+    );
 
     // Check if the domain matches exactly.
     if (in_array($message_data['domain'], $expected_domains)) {
@@ -288,6 +296,41 @@ class SiweMessageValidator {
     }
 
     throw new InvalidSiweMessageException('Invalid domain');
+  }
+
+  /**
+   * Validates that an ENS name resolves to the signing address.
+   *
+   * @param string $address
+   *   The Ethereum address that signed the message.
+   * @param string $ens_name
+   *   The ENS name to validate.
+   *
+   * @throws \Drupal\siwe_login\Exception\InvalidSiweMessageException
+   */
+  protected function validateENS(string $address, string $ens_name): void {
+    // Initialize ENS resolver with Ethereum provider.
+    $ethereum_provider_url = $this->config->get('ethereum_provider_url') ?: '';
+    $ens_resolver = new EnsResolver($ethereum_provider_url);
+
+    // Resolve ENS name to Ethereum address.
+    $resolved_address = $ens_resolver->resolveName($ens_name);
+
+    // Check if resolution was successful.
+    if (empty($resolved_address)) {
+      throw new InvalidSiweMessageException('Failed to resolve ENS name: ' . $ens_name);
+    }
+
+    // Compare resolved address with signing address (case-insensitive).
+    if (strtolower($resolved_address) !== strtolower($address)) {
+      throw new InvalidSiweMessageException('ENS name does not resolve to signing address');
+    }
+
+    // Log successful ENS validation.
+    // $this->logger->info('ENS name @ens resolved to address @address', [
+    //   '@ens' => $ens_name,
+    //   '@address' => $resolved_address,
+    // ]);
   }
 
   /**
@@ -319,8 +362,8 @@ class SiweMessageValidator {
       $line = $lines[0];
       // Check if this line is a field (contains ': ')
       if (strpos($line, ': ') !== FALSE
-            && preg_match("/^(URI|Version|Chain ID|Nonce|Issued At|Expiration Time|Not Before|Request ID|Resources):/", $line)
-        ) {
+        && preg_match("/^(URI|Version|Chain ID|Nonce|Issued At|Expiration Time|Not Before|Request ID|Resources):/", $line)
+      ) {
         break;
       }
       $statement_lines[] = array_shift($lines);
@@ -339,11 +382,11 @@ class SiweMessageValidator {
 
       // Check if this line is a field header (may or may not have a value)
       if (preg_match(
-            "/^(URI|Version|Chain ID|Nonce|Issued At|Expiration Time|Not Before|Request ID|Resources):(.*)$/",
-            $line,
-            $matches
-        )
-        ) {
+        "/^(URI|Version|Chain ID|Nonce|Issued At|Expiration Time|Not Before|Request ID|Resources):(.*)$/",
+        $line,
+        $matches
+      )
+      ) {
         $key = trim($matches[1]);
         $value = trim($matches[2]);
 

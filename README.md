@@ -36,12 +36,13 @@ The SIWE Login module handles domain validation based on the configuration set b
 - **Require Email Verification**: Require email verification for new users
 - **Require ENS or Username**: Require users to set a username if they don't have an ENS name
 - **Session Timeout**: Session timeout in seconds
+- **Ethereum Provider URL**: URL for the Ethereum RPC provider (Alchemy, Infura, etc.) for ENS validation
 
 When "Require Email Verification" is enabled, new users will be directed to an email verification form during their first login. Existing users without a verified email address will also be prompted to provide one.
 
 When "Require ENS or Username" is enabled, new users without an ENS name will be directed to a username creation form during their first login.
 
-## Email Verification
+## Email Verification (optional)
 
 When email verification is required, the following flow occurs:
 
@@ -52,7 +53,7 @@ When email verification is required, the following flow occurs:
 5. User clicks the verification link in the email
 6. User account is created/updated and the user is logged in
 
-## Username Creation
+## Username Creation (optional)
 
 When username creation is required, the following flow occurs:
 
@@ -61,12 +62,19 @@ When username creation is required, the following flow occurs:
 3. User provides their desired username
 4. User account is created with the provided username and the user is logged in
 
+### ENS Validation (optional)
+
+When an ENS name is provided in the SIWE message resources (in the format `ens:{ens-name}`) and validation is enabled, the module validates that the ENS name resolves to the signing Ethereum address using the ENS contracts on Ethereum mainnet.
+
+This validation requires an Ethereum RPC provider URL to be configured in the settings. To get an Ethereum provider URL, you can sign up for a free account with services like [Alchemy](https://www.alchemy.com/) or [Infura](https://infura.io/).
+
 ## Security
 
 - Uses EIP-191 message signing standard
 - Implements nonce-based replay attack prevention
 - Configurable token expiration
 - Email verification for new users when enabled
+- ENS name validation against Ethereum mainnet when provided
 
 ## Support
 

@@ -74,8 +74,46 @@ class SiweSettingsForm extends ConfigFormBase {
       '#min' => 1,
     ];
 
+    $form['enable_ens_validation'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable ENS Validation'),
+      '#default_value' => $config->get('enable_ens_validation'),
+      '#description' => $this->t('Enable validation that ENS names resolve to signing addresses. Requires a valid Ethereum provider URL.'),
+    ];
+
+    $form['ethereum_provider_url'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Ethereum Provider URL'),
+      '#default_value' => $config->get('ethereum_provider_url'),
+      '#description' => $this->t('URL for the Ethereum RPC provider (Alchemy, Infura, etc.).'),
+      '#states' => [
+        'visible' => [
+          ':input[name="enable_ens_validation"]' => ['checked' => TRUE],
+        ],
+        'required' => [
+          ':input[name="enable_ens_validation"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
     return parent::buildForm($form, $form_state);
   }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    if ($form_state->getValue('enable_ens_validation')) {
+      if (empty(trim($form_state->getValue('ethereum_provider_url')))) {
+        $form_state->setErrorByName('ethereum_provider_url', $this->t('Ethereum Provider URL is required when ENS validation is enabled.'));
+      }
+    }
+    parent::validateForm($form, $form_state);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
 
   /**
    * {@inheritdoc}
@@ -89,6 +127,8 @@ class SiweSettingsForm extends ConfigFormBase {
       ->set('require_email_verification', $form_state->getValue('require_email_verification'))
       ->set('require_ens_or_username', $form_state->getValue('require_ens_or_username'))
       ->set('session_timeout', $form_state->getValue('session_timeout'))
+      ->set('ethereum_provider_url', $form_state->getValue('ethereum_provider_url'))
+      ->set('enable_ens_validation', $form_state->getValue('enable_ens_validation'))
       ->save();
 
     parent::submitForm($form, $form_state);

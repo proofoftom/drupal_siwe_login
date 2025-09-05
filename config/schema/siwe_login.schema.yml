@@ -20,3 +20,9 @@ siwe_login.settings:
     session_timeout:
       type: integer
       label: "Session timeout"
+    enable_ens_validation:
+      type: boolean
+      label: "Enable ENS validation"
+    ethereum_provider_url:
+      type: string
+      label: "Ethereum provider URL"

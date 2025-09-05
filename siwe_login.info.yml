@@ -7,3 +7,4 @@ dependencies:
   - drupal:user
   - drupal:system
 configure: siwe_login.settings
+version: 1.0.0
