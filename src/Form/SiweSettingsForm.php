@@ -66,12 +66,16 @@ class SiweSettingsForm extends ConfigFormBase {
       '#description' => $this->t('Require email verification for new users.'),
     ];
 
-    $form['session_timeout'] = [
+    // Convert session timeout from seconds to hours for user-friendly display
+    $session_timeout_hours = $config->get('session_timeout') / 3600;
+    
+    $form['session_timeout_hours'] = [
       '#type' => 'number',
-      '#title' => $this->t('Session Timeout'),
-      '#default_value' => $config->get('session_timeout'),
-      '#description' => $this->t('Session timeout in seconds.'),
+      '#title' => $this->t('Session Timeout (hours)'),
+      '#default_value' => $session_timeout_hours,
+      '#description' => $this->t('Session timeout in hours. Default is 24 hours.'),
       '#min' => 1,
+      '#step' => 1,
     ];
 
     $form['enable_ens_validation'] = [
@@ -121,12 +125,15 @@ class SiweSettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // Save all settings except expected_domain, which is managed
     // automatically.
+    // Convert session timeout from hours to seconds
+    $session_timeout_seconds = $form_state->getValue('session_timeout_hours') * 3600;
+    
     $this->config('siwe_login.settings')
       ->set('nonce_ttl', $form_state->getValue('nonce_ttl'))
       ->set('message_ttl', $form_state->getValue('message_ttl'))
       ->set('require_email_verification', $form_state->getValue('require_email_verification'))
       ->set('require_ens_or_username', $form_state->getValue('require_ens_or_username'))
-      ->set('session_timeout', $form_state->getValue('session_timeout'))
+      ->set('session_timeout', $session_timeout_seconds)
       ->set('ethereum_provider_url', $form_state->getValue('ethereum_provider_url'))
       ->set('enable_ens_validation', $form_state->getValue('enable_ens_validation'))
       ->save();

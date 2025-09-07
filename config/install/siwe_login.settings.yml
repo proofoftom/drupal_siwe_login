@@ -1,4 +1,5 @@
-expected_domain: ""
+# Note: expected_domain is set automatically during installation
+# See siwe_login.install for details
 nonce_ttl: 300
 message_ttl: 600
 require_ens_or_username: false

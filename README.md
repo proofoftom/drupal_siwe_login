@@ -12,10 +12,56 @@ This module provides Ethereum wallet-based authentication for Drupal using the S
 
 ## Installation
 
-1. Install via Composer: `composer require drupal/siwe_login`
-2. Enable modules: `drush en siwe_login -y`
-3. Import configuration: `drush config-import --partial --source=modules/custom/siwe_login/config/install`
-4. Configure at `/admin/config/people/siwe` or through the admin menu under "Configuration > People > SIWE Login"
+### Method 1: Using Composer (Recommended)
+
+1. Add the module to your project using Composer:
+   ```
+   composer require drupal/siwe_login
+   ```
+
+2. Enable the module:
+   ```
+   drush en siwe_login -y
+   ```
+
+3. Install the module's dependencies:
+   ```
+   composer require kornrunner/keccak:^1.0 simplito/elliptic-php:^1.0 web3p/web3.php:^0.3.2
+   ```
+
+### Method 2: Manual Installation
+
+1. Clone the module into your Drupal custom modules directory:
+   ```
+   cd web/modules/custom
+   git clone https://github.com/proofoftom/drupal_siwe_login siwe_login
+   ```
+
+2. Enable the module:
+   ```
+   drush en siwe_login -y
+   ```
+
+3. Install the module's dependencies:
+   ```
+   composer require kornrunner/keccak:^1.0 simplito/elliptic-php:^1.0 web3p/web3.php:^0.3.2
+   ```
+
+4. If using DDEV, ensure the GMP extension is installed by adding the following to `.ddev/config.yaml`:
+   ```
+   webimage_extra_packages: [php8.3-gmp]
+   ```
+   Then restart DDEV:
+   ```
+   ddev restart
+   ```
+
+5. Import configuration:
+   ```
+   drush config-import --partial --source=modules/custom/siwe_login/config/install
+   ```
+
+6. Configure at `/admin/config/people/siwe` or through the admin menu under "Configuration > People > SIWE Login"
 
 ## API Endpoints
 
@@ -32,10 +78,9 @@ The SIWE Login module handles domain validation based on the configuration set b
 
 - **Nonce TTL**: Time-to-live for nonces in seconds
 - **Message TTL**: Time-to-live for SIWE messages in seconds
-- **Allow Registration**: Allow new users to register using SIWE
 - **Require Email Verification**: Require email verification for new users
 - **Require ENS or Username**: Require users to set a username if they don't have an ENS name
-- **Session Timeout**: Session timeout in seconds
+- **Session Timeout**: Session timeout in hours (default: 24 hours)
 - **Ethereum Provider URL**: URL for the Ethereum RPC provider (Alchemy, Infura, etc.) for ENS validation
 
 When "Require Email Verification" is enabled, new users will be directed to an email verification form during their first login. Existing users without a verified email address will also be prompted to provide one.
@@ -100,4 +145,4 @@ This module requires the following fields to be configured for the user entity:
 - `field_ethereum_address` - Stores the Ethereum address associated with the user account
 - `field_ens_name` (optional) - Stores the ENS name associated with the user account
 
-These fields are automatically created when importing the configuration.
+These fields are automatically created during module installation.
