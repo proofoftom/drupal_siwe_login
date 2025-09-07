@@ -1,0 +1,13 @@
+/**
+ * @file
+ * Custom styles for the SIWE Login block.
+ */
+
+#block-siwe-login {
+  align-content: center;
+}
+
+#siwe-login-button {
+  margin-inline-start: var(--sp1);
+  margin-inline-end: 0;
+}

@@ -50,14 +50,20 @@ class SiweLoginBlock extends BlockBase {
    */
   public function build() {
     return [
-      '#type' => 'button',
-      '#id' => 'siwe-login-button',
-      '#value' => $this->configuration['button_text'],
-      '#attached' => [
-        'library' => [
-          'siwe_login/siwe_login_library',
+      'siwe_login_button' => [
+        '#type' => 'button',
+        '#id' => 'siwe-login-button',
+        '#value' => $this->configuration['button_text'],
+        '#attributes' => [
+          'class' => ['button', 'button--small', 'button--primary'],
         ],
-      ],
+        '#attached' => [
+          'library' => [
+            'siwe_login/siwe_login_js',
+            'siwe_login/siwe_login_styles',
+          ],
+        ],
+      ]
     ];
   }
 
