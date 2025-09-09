@@ -12,56 +12,58 @@ This module provides Ethereum wallet-based authentication for Drupal using the S
 
 ## Installation
 
+If using DDEV, ensure the GMP extension is installed by adding the following to `.ddev/config.yaml`:
+
+```yaml
+webimage_extra_packages: [php8.3-gmp]
+```
+
+Then restart DDEV:
+
+```shell
+ddev restart
+```
+
 ### Method 1: Using Composer (Recommended)
 
 1. Add the module to your project using Composer:
-   ```
-   composer require drupal/siwe_login
-   ```
+
+```shell
+composer require drupal/siwe_login
+```
 
 2. Enable the module:
-   ```
-   drush en siwe_login -y
-   ```
 
-3. Install the module's dependencies:
-   ```
-   composer require kornrunner/keccak:^1.0 simplito/elliptic-php:^1.0 web3p/web3.php:^0.3.2
-   ```
+```shell
+drush en siwe_login -y
+```
 
-### Method 2: Manual Installation
+### Method 2: Manual Installation (for development)
 
 1. Clone the module into your Drupal custom modules directory:
-   ```
-   cd web/modules/custom
-   git clone https://github.com/proofoftom/drupal_siwe_login siwe_login
-   ```
+
+```shell
+cd web/modules/custom
+git clone https://github.com/proofoftom/drupal_siwe_login siwe_login
+```
 
 2. Enable the module:
-   ```
-   drush en siwe_login -y
-   ```
 
-3. Install the module's dependencies:
-   ```
-   composer require kornrunner/keccak:^1.0 simplito/elliptic-php:^1.0 web3p/web3.php:^0.3.2
-   ```
+```shell
+drush en siwe_login -y
+```
 
-4. If using DDEV, ensure the GMP extension is installed by adding the following to `.ddev/config.yaml`:
-   ```
-   webimage_extra_packages: [php8.3-gmp]
-   ```
-   Then restart DDEV:
-   ```
-   ddev restart
-   ```
+3. Install the module's dependencies (from the project root):
 
-5. Import configuration:
-   ```
-   drush config-import --partial --source=modules/custom/siwe_login/config/install
-   ```
+```shell
+composer require kornrunner/keccak:^1.0 simplito/elliptic-php:^1.0 web3p/web3.php:^0.3.2
+```
 
-6. Configure at `/admin/config/people/siwe` or through the admin menu under "Configuration > People > SIWE Login"
+### Import configuration (Optional, mostly for CI/CD)
+
+```shell
+drush config-import --partial --source=modules/custom/siwe_login/config/install
+```
 
 ## API Endpoints
 
@@ -70,11 +72,11 @@ This module provides Ethereum wallet-based authentication for Drupal using the S
 
 ## Configuration
 
-See `/admin/config/people/siwe` for configuration options.
+Configure at `/admin/config/people/siwe` or through the admin menu under "Configuration > People > SIWE Login"
 
 ### Settings
 
-The SIWE Login module handles domain validation based on the configuration set by the SIWE Server module. When used standalone, it validates against the current Drupal host. When used with SIWE Server, it validates against the domains configured in the SIWE Server settings. The following settings are available:
+The following settings are available:
 
 - **Nonce TTL**: Time-to-live for nonces in seconds
 - **Message TTL**: Time-to-live for SIWE messages in seconds
@@ -86,6 +88,8 @@ The SIWE Login module handles domain validation based on the configuration set b
 When "Require Email Verification" is enabled, new users will be directed to an email verification form during their first login. Existing users without a verified email address will also be prompted to provide one.
 
 When "Require ENS or Username" is enabled, new users without an ENS name will be directed to a username creation form during their first login.
+
+The SIWE Login module always performs domain validation. When used standalone, it uses the Drupal host daomin from when the module was installed; otherwise it'll use the domains configured in SIWE Server settings (if installed, not required).
 
 ## Email Verification (optional)
 
