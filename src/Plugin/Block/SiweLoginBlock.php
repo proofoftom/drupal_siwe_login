@@ -63,7 +63,7 @@ class SiweLoginBlock extends BlockBase {
             'siwe_login/siwe_login_styles',
           ],
         ],
-      ]
+      ],
     ];
   }
 

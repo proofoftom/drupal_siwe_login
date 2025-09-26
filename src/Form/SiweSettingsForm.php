@@ -66,9 +66,9 @@ class SiweSettingsForm extends ConfigFormBase {
       '#description' => $this->t('Require email verification for new users.'),
     ];
 
-    // Convert session timeout from seconds to hours for user-friendly display
+    // Convert session timeout from seconds to hours for user-friendly display.
     $session_timeout_hours = $config->get('session_timeout') / 3600;
-    
+
     $form['session_timeout_hours'] = [
       '#type' => 'number',
       '#title' => $this->t('Session Timeout (hours)'),
@@ -125,9 +125,9 @@ class SiweSettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // Save all settings except expected_domain, which is managed
     // automatically.
-    // Convert session timeout from hours to seconds
+    // Convert session timeout from hours to seconds.
     $session_timeout_seconds = $form_state->getValue('session_timeout_hours') * 3600;
-    
+
     $this->config('siwe_login.settings')
       ->set('nonce_ttl', $form_state->getValue('nonce_ttl'))
       ->set('message_ttl', $form_state->getValue('message_ttl'))

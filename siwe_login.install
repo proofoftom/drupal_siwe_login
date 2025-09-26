@@ -5,7 +5,7 @@
  * Install and uninstall hooks for the SIWE Login module.
  */
 
-use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\block\Entity\Block;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 
@@ -16,7 +16,7 @@ function siwe_login_install() {
   // Set the expected_domain to the current host during installation.
   $config = \Drupal::configFactory()->getEditable('siwe_login.settings');
   $config->set('expected_domain', \Drupal::request()->getHost())->save();
-  
+
   // Create field storage for Ethereum address.
   if (!FieldStorageConfig::loadByName('user', 'field_ethereum_address')) {
     FieldStorageConfig::create([
@@ -31,7 +31,7 @@ function siwe_login_install() {
       'cardinality' => 1,
     ])->save();
   }
-  
+
   // Create field storage for ENS name.
   if (!FieldStorageConfig::loadByName('user', 'field_ens_name')) {
     FieldStorageConfig::create([
@@ -46,7 +46,7 @@ function siwe_login_install() {
       'cardinality' => 1,
     ])->save();
   }
-  
+
   // Create field for Ethereum address on user entity.
   if (!FieldConfig::loadByName('user', 'user', 'field_ethereum_address')) {
     FieldConfig::create([
@@ -60,15 +60,15 @@ function siwe_login_install() {
       'settings' => [],
     ])->save();
   }
-  
+
   // Get the default theme.
   $default_theme = \Drupal::config('system.theme')->get('default');
-  
+
   // Place the SIWE login block in the secondary menu region for anonymous users.
   // First, check if the block already exists.
   $block_id = 'siwe_login';
   $block = \Drupal::entityTypeManager()->getStorage('block')->load($block_id);
-  
+
   if (!$block) {
     // Create the SIWE login block.
     $block = \Drupal::entityTypeManager()->getStorage('block')->create([
@@ -98,12 +98,12 @@ function siwe_login_install() {
     ]);
     $block->save();
   }
-  
+
   // Update the Olivero account menu visibility to only show for authenticated users.
   $account_menu_block = \Drupal::entityTypeManager()->getStorage('block')->load('olivero_account_menu');
   if ($account_menu_block) {
-    // Load the block entity to modify its properties
-    $account_menu_block = \Drupal\block\Entity\Block::load('olivero_account_menu');
+    // Load the block entity to modify its properties.
+    $account_menu_block = Block::load('olivero_account_menu');
     if ($account_menu_block) {
       $visibility = $account_menu_block->get('visibility');
       $visibility['user_role'] = [
@@ -131,28 +131,28 @@ function siwe_login_uninstall() {
   if ($block) {
     $block->delete();
   }
-  
+
   // Delete field configurations.
   $field_config = FieldConfig::loadByName('user', 'user', 'field_ethereum_address');
   if ($field_config) {
     $field_config->delete();
   }
-  
+
   $field_storage = FieldStorageConfig::loadByName('user', 'field_ethereum_address');
   if ($field_storage) {
     $field_storage->delete();
   }
-  
+
   $field_storage = FieldStorageConfig::loadByName('user', 'field_ens_name');
   if ($field_storage) {
     $field_storage->delete();
   }
-  
+
   // Reset the Olivero account menu visibility to default.
   $account_menu_block = \Drupal::entityTypeManager()->getStorage('block')->load('olivero_account_menu');
   if ($account_menu_block) {
-    // Load the block entity to modify its properties
-    $account_menu_block = \Drupal\block\Entity\Block::load('olivero_account_menu');
+    // Load the block entity to modify its properties.
+    $account_menu_block = Block::load('olivero_account_menu');
     if ($account_menu_block) {
       $visibility = $account_menu_block->get('visibility');
       // Remove the user_role visibility condition if it exists.

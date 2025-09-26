@@ -41,15 +41,15 @@ function siwe_login_mail($key, &$message, $params) {
 
   switch ($key) {
     case 'email_verification':
-      // Ensure we have a config value
+      // Ensure we have a config value.
       $subject = $config->get('email_verification.subject');
       $body = $config->get('email_verification.body');
 
-      // Set defaults if config is missing
+      // Set defaults if config is missing.
       $message['subject'] = $subject ?: t('Verify your email address');
       $message['body'][] = $body ?: t("Please verify your email address by clicking the link below:\n\n[siwe:email-verification-url]");
 
-      // Add custom token replacement
+      // Add custom token replacement.
       if (isset($params['verification_url'])) {
         $message['body'][0] = str_replace('[siwe:email-verification-url]', $params['verification_url'], $message['body'][0]);
       }
