@@ -219,16 +219,19 @@ class SiweAuthController extends ControllerBase {
         // User authenticated successfully.
         user_login_finalize($user);
 
-        return new JsonResponse(
-          [
-            'success' => TRUE,
-            'user' => [
-              'uid' => $user->id(),
-              'name' => $user->getAccountName(),
-              'address' => $user->get('field_ethereum_address')->value,
-            ],
-          ]
-        );
+        $response_data = [
+          'success' => TRUE,
+          'user' => [
+            'uid' => $user->id(),
+            'name' => $user->getAccountName(),
+            'address' => $user->get('field_ethereum_address')->value,
+          ],
+        ];
+
+        // Allow other modules to alter the response (e.g., add redirect)
+        $this->moduleHandler()->invokeAll('siwe_login_response_alter', [&$response_data, $user]);
+
+        return new JsonResponse($response_data);
       }
 
       return new JsonResponse(
